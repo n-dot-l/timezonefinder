@@ -56,6 +56,22 @@ def build_hex_zone_data(
     return collection_offset
 
 
+def write_hex_zone_flatbuffer(
+    hex_zone_mapping: Dict[int, int], output_path: Path
+) -> None:
+    """
+    writes the hex_id -> zone_id mapping to a flatbuffer file
+    :param hex_zone_mapping: a dict mapping h3 hex_ids to zone_ids
+    :param output_path: the path to the output file
+    """
+    builder = flatbuffers.Builder(1024)
+    collection_offset = build_hex_zone_data(builder, hex_zone_mapping)
+    builder.Finish(collection_offset)
+    buf = builder.Output()
+    with open(output_path, "wb") as f:
+        f.write(buf)
+
+
 class HexZoneReader:
     """
     class for reading the hex_id -> zone_id mapping from a flatbuffer file

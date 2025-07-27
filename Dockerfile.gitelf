@@ -1,7 +1,7 @@
 FROM python:3.11-slim
 
 # Install system dependencies
-RUN apt-get update && apt-get install -y make flatbuffers-compiler build-essential libffi-dev
+RUN apt-get update && apt-get install -y make flatbuffers-compiler build-essential libffi-dev wget unzip
 
 # Install uv, the python package manager/resolver
 RUN pip install uv
@@ -14,6 +14,10 @@ RUN uv sync --all-groups
 
 # compile flatbuffer schemas
 RUN make flatbuf
+
+# Download data and generate data files
+# this is required to generate the new hex_zones.fbs file
+RUN bash parse_data.sh
 
 # run tests and capture output
 CMD ["sh", "-c", "make test && make speedtest"]
