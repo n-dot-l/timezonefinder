@@ -11,6 +11,7 @@ from typing import Callable, Dict, List
 
 from scripts.configs import DATA_REPORT_FILE
 from scripts.utils import percent
+from timezonefinder.flatbuf.hex_zone_utils import get_hex_zone_file_path
 from timezonefinder.flatbuf.polygon_utils import get_coordinate_path
 from timezonefinder.flatbuf.shortcut_utils import get_shortcut_file_path
 from timezonefinder.utils import (
@@ -126,16 +127,36 @@ def get_file_size_in_mb(file_path: Path) -> float:
 
 
 @redirect_output_to_file(DATA_REPORT_FILE)
-def print_shortcut_statistics(mapping: Dict[int, List[int]], poly_zone_ids: List[int]):
+def print_shortcut_statistics(
+    shortcut_map: Dict[int, List[int]],
+    unique_zone_map: Dict[int, int],
+    poly_zone_ids: List[int],
+):
     print(rst_title("Shortcut Mapping Statistics", level=1))
 
-    nr_of_entries_in_shortcut = [len(v) for v in mapping.values()]
+    nr_unique = len(unique_zone_map)
+    nr_multi = len(shortcut_map)
+    total = nr_unique + nr_multi
+    if total > 0:
+        print(
+            f"Out of {total:,} total hexagons in the spatial index, "
+            f"{nr_unique:,} ({percent(nr_unique, total)}%) have a unique timezone and are stored as direct lookups."
+        )
+        print(
+            f"The remaining {nr_multi:,} ({percent(nr_multi, total)}%) hexagons have multiple timezone polygons and are stored as shortcuts."
+        )
+        print()
 
+    print(rst_title("Multi-Zone Shortcut Statistics", level=2))
+    if not shortcut_map:
+        print("No multi-zone shortcuts found.")
+        return
+
+    nr_of_entries_in_shortcut = [len(v) for v in shortcut_map.values()]
     print_frequencies(nr_of_entries_in_shortcut, "polygons/shortcut")
 
     amount_of_different_zones = []
-    for polygon_ids in mapping.values():
-        # TODO count and evaluate the appearance of the different zones
+    for polygon_ids in shortcut_map.values():
         zone_ids = [poly_zone_ids[i] for i in polygon_ids]
         distinct_zones = set(zone_ids)
         amount_of_distinct_zones = len(distinct_zones)
@@ -292,7 +313,6 @@ def calculate_timezone_metrics(
         nr_of_zones: Number of timezone zones
         nr_of_polygons: Number of boundary polygons
         polygons_per_timezone: Counter mapping zone IDs to polygon counts
-        all_tz_names: List of timezone names
 
     Returns:
         Dictionary of timezone metrics
@@ -424,7 +444,7 @@ def report_data_statistics(
     print(rst_title("Timezone Statistics", level=2))
     polygons_per_timezone = Counter(poly_zone_ids)
     timezone_metrics = calculate_timezone_metrics(
-        nr_of_zones, nr_of_polygons, polygons_per_timezone, all_tz_names
+        nr_of_zones, nr_of_polygons, polygons_per_timezone
     )
     timezone_rows = generate_metrics_rows("timezone", timezone_metrics)
     print_rst_table(["Timezone Metric", "Value"], timezone_rows)
@@ -454,11 +474,14 @@ def report_file_sizes(output_path: Path) -> None:
         "boundary polygon data": boundary_polygon_file,
         "hole polygon data": hole_polygon_file,
         "shortcuts": get_shortcut_file_path(output_path),
+        "unique zone shortcuts": get_hex_zone_file_path(output_path),
     }
     names_and_sizes = {
-        name: get_file_size_in_mb(path) for name, path in names_and_paths.items()
+        name: get_file_size_in_mb(path) for name, path in names_and_paths.items() if path.exists()
     }
     total_space = sum(names_and_sizes.values())
+    if total_space == 0:
+        return
 
     # Create table for file sizes
     headers = ["File Type", "Size (MB)", "Percentage"]
@@ -475,7 +498,8 @@ def report_file_sizes(output_path: Path) -> None:
 
 
 def write_data_report(
-    shortcuts: Dict[int, List[int]],
+    shortcut_map: Dict[int, List[int]],
+    unique_zone_map: Dict[int, int],
     output_path: Path,
     nr_of_polygons: int,
     nr_of_zones: int,
@@ -489,7 +513,8 @@ def write_data_report(
     Writes a complete data report to the report file.
 
     Args:
-        shortcuts: Mapping of hexagon IDs to polygon IDs
+        shortcut_map: Mapping of hexagon IDs to polygon IDs for multi-zone shortcuts
+        unique_zone_map: Mapping of hexagon IDs to unique zone IDs
         output_path: Path to the output directory
         nr_of_polygons: Number of boundary polygons
         nr_of_zones: Number of timezone zones
@@ -513,5 +538,5 @@ def write_data_report(
         poly_zone_ids,
         all_tz_names,
     )
-    print_shortcut_statistics(shortcuts, poly_zone_ids)
+    print_shortcut_statistics(shortcut_map, unique_zone_map, poly_zone_ids)
     report_file_sizes(output_path)

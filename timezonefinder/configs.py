@@ -1,44 +1,37 @@
-from pathlib import Path
-from typing import Dict, List, Tuple
+# settings, can be overridden in scripts/configs.py for data generation
+# resolution of the h3 hexagons
+# DON'T CHANGE THIS WITHOUT CAREFUL CONSIDERATION!
+# h3 resolution used for polygon embedding and for the shortcuts
+# the higher the resolution, the more memory is needed for the shortcuts
+H3_RESOLUTION: int = 6
 
-import numpy as np
+# files names of the packaged data
+HOLES_FILE_NAME = "holes.json"
+# name of the flatbuffer file for the boundaries
+# (.fbs is the file extension for flatbuffer schema files)
+POLYGON_FILE_NAME = "coordinates.fbs"
+SHORTCUTS_FILE_NAME = "shortcuts.fbs"
+HEX_ZONES_FILE_NAME = "hex_zones.fbs"
+TIMEZONE_NAMES_FILE_NAME = "timezone_names.txt"
+ZONE_IDS_FILE_NAME = "zone_ids.npy"
+ZONE_POSITIONS_FILE_NAME = "zone_positions.npy"
+HOLE_REGISTRY_FILE_NAME = "hole_registry.json"
 
-# SHORTCUT SETTINGS
-# h3 library
-SHORTCUT_H3_RES: int = 3
+# BBoxes of the polygons are stored in these files
+# BBOX_X_MAX_FILE_NAME = "max_x.re"
+# BBOX_X_MIN_FILE_NAME = "min_x.re"
+# BBOX_Y_MAX_FILE_NAME = "max_y.re"
+# BBOX_Y_MIN_FILE_NAME = "min_y.re"
 
-OCEAN_TIMEZONE_PREFIX = r"Etc/GMT"
+# the most common timezone names (=zones)
+# a list of tz names is compiled in the data generation process
+# for all tz with id < NR_SHORTCUT_ZONE_IDS a shortcut is created
+# this means that for all coordinates inside the BBox of such a zone, the correct tz is returned right away
+# NR_SHORTCUT_ZONE_IDS = 10
 
-# PATHS
-PACKAGE_DIR = Path(__file__).parent
-DEFAULT_DATA_DIR = PACKAGE_DIR / "data"
-
-
-# i = signed 4byte integer
-NR_BYTES_I = 4
-# IMPORTANT: all values between -180 and 180 degree must fit into the domain of i4!
-# is the same as testing if 360 fits into the domain of I4 (unsigned!)
-MAX_ALLOWED_COORD_VAL = 2 ** (8 * NR_BYTES_I - 1)
-
-# from math import floor,log10
-# DECIMAL_PLACES_SHIFT = floor(log10(MAX_ALLOWED_COORD_VAL/180.0)) # == 7
-DECIMAL_PLACES_SHIFT = 7
-INT2COORD_FACTOR = 10 ** (-DECIMAL_PLACES_SHIFT)
-COORD2INT_FACTOR = 10**DECIMAL_PLACES_SHIFT
-MAX_LNG_VAL = 180.0
-MAX_LAT_VAL = 90.0
-MAX_LNG_VAL_INT = int(MAX_LNG_VAL * COORD2INT_FACTOR)
-MAX_LAT_VAL_INT = int(MAX_LAT_VAL * COORD2INT_FACTOR)
-MAX_INT_VAL = MAX_LNG_VAL_INT
-assert MAX_INT_VAL < MAX_ALLOWED_COORD_VAL
-
-# TYPES
-# used in Numba JIT compiled function signatures in utils_numba.py
-# NOTE: Changes in the global settings might not immediately affect
-#  the functions due to caching!
-
-# hexagon id to list of polygon ids
-ShortcutMapping = Dict[int, np.ndarray]
-CoordPairs = List[Tuple[float, float]]
-CoordLists = List[List[float]]
-IntLists = List[List[int]]
+# when a zone is split up into unconnected polygons, those get assigned the same name (=id)
+# the most common zone name is "uninhabited"
+# all the polygons of the uninhabited zones are not used for timezone finding, but for theAdmin boundary queries
+# they are mostly water areas within countries.
+# it is not distinguished between different uninhabited zones.
+# UNINHABITED_ZONE_ID = 0

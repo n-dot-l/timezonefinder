@@ -1,0 +1,12 @@
+// an entry in the mapping from h3 hexagon id to a unique zone id
+table HexZoneEntry {
+    h3_id: ulong;
+    zone_id: int32;
+}
+
+// a collection of all entries
+table HexZoneCollection {
+    entries: [HexZoneEntry];
+}
+
+root_type HexZoneCollection;
