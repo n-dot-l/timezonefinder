@@ -76,6 +76,10 @@ from scripts.reporting import (
 )
 
 from scripts.utils_numba import fully_contained_in_hole, any_pt_in_poly
+from timezonefinder.flatbuf.hex_zone_utils import (
+    get_hex_zone_file_path,
+    write_hex_zone_flatbuffer,
+)
 from timezonefinder.flatbuf.polygon_utils import (
     get_coordinate_path,
     write_polygon_collection_flatbuffer,
@@ -746,6 +750,21 @@ def parse_data(
     shortcuts = compile_shortcut_mapping()
     output_file = get_shortcut_file_path(output_path)
     write_shortcuts_flatbuffers(shortcuts, output_file)
+
+    print("creating hex to unique zone mapping...")
+    hex_zone_mapping = {}
+    for hex_id, poly_ids in shortcuts.items():
+        if not poly_ids:
+            continue
+        # poly_zone_ids is a numpy array
+        zone_ids = poly_zone_ids[poly_ids]
+        unique_zones = np.unique(zone_ids)
+        if len(unique_zones) == 1:
+            hex_zone_mapping[hex_id] = int(unique_zones[0])
+
+    print(f"found {len(hex_zone_mapping)} hex cells with unique zones.")
+    output_file_hex_zones = get_hex_zone_file_path(output_path)
+    write_hex_zone_flatbuffer(hex_zone_mapping, output_file_hex_zones)
 
     print(f"\n\nfinished parsing timezonefinder data to {output_path}")
 

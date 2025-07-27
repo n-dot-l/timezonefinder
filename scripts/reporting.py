@@ -11,6 +11,7 @@ from typing import Callable, Dict, List
 
 from scripts.configs import DATA_REPORT_FILE
 from scripts.utils import percent
+from timezonefinder.flatbuf.hex_zone_utils import get_hex_zone_file_path
 from timezonefinder.flatbuf.polygon_utils import get_coordinate_path
 from timezonefinder.flatbuf.shortcut_utils import get_shortcut_file_path
 from timezonefinder.utils import (
@@ -424,7 +425,7 @@ def report_data_statistics(
     print(rst_title("Timezone Statistics", level=2))
     polygons_per_timezone = Counter(poly_zone_ids)
     timezone_metrics = calculate_timezone_metrics(
-        nr_of_zones, nr_of_polygons, polygons_per_timezone, all_tz_names
+        nr_of_zones, nr_of_polygons, polygons_per_timezone
     )
     timezone_rows = generate_metrics_rows("timezone", timezone_metrics)
     print_rst_table(["Timezone Metric", "Value"], timezone_rows)
@@ -449,23 +450,29 @@ def report_file_sizes(output_path: Path) -> None:
 
     boundary_polygon_file = get_coordinate_path(boundaries_dir)
     hole_polygon_file = get_coordinate_path(holes_dir)
+    hex_zone_file = get_hex_zone_file_path(output_path)
 
     names_and_paths = {
         "boundary polygon data": boundary_polygon_file,
         "hole polygon data": hole_polygon_file,
         "shortcuts": get_shortcut_file_path(output_path),
+        "hex zones mapping": hex_zone_file,
     }
     names_and_sizes = {
-        name: get_file_size_in_mb(path) for name, path in names_and_paths.items()
+        name: get_file_size_in_mb(path)
+        for name, path in names_and_paths.items()
+        if path.exists()
     }
     total_space = sum(names_and_sizes.values())
 
     # Create table for file sizes
     headers = ["File Type", "Size (MB)", "Percentage"]
-    rows = [
-        [name, f"{size:.2f}", f"{size / total_space:.2%}"]
-        for name, size in names_and_sizes.items()
-    ]
+    rows = []
+    if total_space > 0:
+        rows = [
+            [name, f"{size:.2f}", f"{size / total_space:.2%}"]
+            for name, size in names_and_sizes.items()
+        ]
 
     # Add total row
     rows.append(["Total", f"{total_space:.2f}", "100.00%"])

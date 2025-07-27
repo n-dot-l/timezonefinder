@@ -1,0 +1,13 @@
+// schema for storing the mapping from a h3 hexagon id to a single, unique timezone id
+namespace timezonefinder.flatbuf;
+
+table HexZoneEntry {
+    hex_id: ulong;
+    zone_id: ushort;
+}
+
+table HexZoneCollection {
+    entries: [HexZoneEntry];
+}
+
+root_type HexZoneCollection;
