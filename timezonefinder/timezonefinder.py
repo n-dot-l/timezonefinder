@@ -23,6 +23,7 @@ from timezonefinder.flatbuf.shortcut_utils import (
     get_shortcut_file_path,
     read_shortcuts_binary,
 )
+from timezonefinder.flatbuf.hex_zone_utils import HexZoneReader
 from timezonefinder.zone_names import read_zone_names
 
 
@@ -36,6 +37,7 @@ class AbstractTimezoneFinder(ABC):
         "data_location",
         "shortcut_mapping",
         "in_memory",
+        "hex_zone_reader",
         "_fromfile",
         "timezone_names",
         "zone_ids",
@@ -71,6 +73,8 @@ class AbstractTimezoneFinder(ABC):
 
         zone_ids_path = get_zone_ids_path(self.data_location)
         self.zone_ids = read_per_polygon_vector(zone_ids_path)
+
+        self.hex_zone_reader = HexZoneReader(self.data_location, in_memory=in_memory)
 
     @property
     def nr_of_zones(self):
@@ -191,6 +195,13 @@ class AbstractTimezoneFinder(ABC):
         # more than one zone in this shortcut
         return None
 
+    def unique_hex_zone_id(self, *, lng: float, lat: float) -> Optional[int]:
+        """
+        Get the unique zone ID from the hex_zone mapping.
+        """
+        hex_id = h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)
+        return self.hex_zone_reader.get_zone_id(hex_id)
+
     @abstractmethod
     def timezone_at(self, *, lng: float, lat: float) -> Optional[str]:
         """looks up in which timezone the given coordinate is included in
@@ -226,6 +237,12 @@ class AbstractTimezoneFinder(ABC):
         :return: the timezone name of the unique zone or ``None`` if there are no or multiple zones in this shortcut
         """
         lng, lat = utils.validate_coordinates(lng, lat)
+
+        # a hex cell with a unique zone is the fastest and most reliable shortcut
+        unique_id = self.unique_hex_zone_id(lng=lng, lat=lat)
+        if unique_id is not None:
+            return self.zone_name_from_id(unique_id)
+
         unique_id = self.unique_zone_id(lng=lng, lat=lat)
         if unique_id is None:
             return None
@@ -251,6 +268,12 @@ class TimezoneFinderL(AbstractTimezoneFinder):
         :return: the timezone name of the most common zone or None if there are no timezone polygons in this shortcut
         """
         lng, lat = utils.validate_coordinates(lng, lat)
+
+        # a hex cell with a unique zone is the fastest and most reliable shortcut
+        unique_id = self.unique_hex_zone_id(lng=lng, lat=lat)
+        if unique_id is not None:
+            return self.zone_name_from_id(unique_id)
+
         most_common_id = self.most_common_zone_id(lng=lng, lat=lat)
         if most_common_id is None:
             return None
@@ -468,6 +491,11 @@ class TimezoneFinder(AbstractTimezoneFinder):
         :return: the timezone name of the matched polygon, or None if no match is found.
         """
         lng, lat = utils.validate_coordinates(lng, lat)
+
+        unique_id = self.unique_hex_zone_id(lng=lng, lat=lat)
+        if unique_id is not None:
+            return self.zone_name_from_id(unique_id)
+
         possible_boundaries = self.get_boundaries_in_shortcut(lng=lng, lat=lat)
         nr_possible_polygons = len(possible_boundaries)
         if nr_possible_polygons == 0:
