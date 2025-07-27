@@ -1,0 +1,19 @@
+FROM python:3.11-slim
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y make flatbuffers-compiler
+
+# Install uv, the python package manager/resolver
+RUN pip install uv
+
+WORKDIR /app
+COPY . .
+
+# Install python dependencies
+RUN uv sync --all-groups
+
+# compile flatbuffer schemas
+RUN make flatbuf
+
+# run tests and capture output
+CMD ["sh", "-c", "make test && make speedtest"]
