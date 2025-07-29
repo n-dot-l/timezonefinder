@@ -1,0 +1,12 @@
+// an entry mapping one hexagon id to one unique zone id
+table HexZoneEntry {
+  hex_id: ulong;
+  zone_id: ushort;
+}
+
+// a collection of these entries
+table HexZoneCollection {
+  entries: [HexZoneEntry];
+}
+
+root_type HexZoneCollection;

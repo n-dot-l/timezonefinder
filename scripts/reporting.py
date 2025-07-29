@@ -13,6 +13,7 @@ from scripts.configs import DATA_REPORT_FILE
 from scripts.utils import percent
 from timezonefinder.flatbuf.polygon_utils import get_coordinate_path
 from timezonefinder.flatbuf.shortcut_utils import get_shortcut_file_path
+from timezonefinder.flatbuf.hex_zone_utils import get_hex_zone_file_path
 from timezonefinder.utils import (
     get_holes_dir,
     get_boundaries_dir,
@@ -134,14 +135,25 @@ def print_shortcut_statistics(mapping: Dict[int, List[int]], poly_zone_ids: List
     print_frequencies(nr_of_entries_in_shortcut, "polygons/shortcut")
 
     amount_of_different_zones = []
+    unique_zone_shortcuts = 0
     for polygon_ids in mapping.values():
         # TODO count and evaluate the appearance of the different zones
         zone_ids = [poly_zone_ids[i] for i in polygon_ids]
         distinct_zones = set(zone_ids)
         amount_of_distinct_zones = len(distinct_zones)
+        if amount_of_distinct_zones == 1:
+            unique_zone_shortcuts += 1
         amount_of_different_zones.append(amount_of_distinct_zones)
 
     print_frequencies(amount_of_different_zones, "timezones/shortcut")
+
+    print("\nHex-Zone Shortcut Statistics:\n")
+    total_shortcuts = len(mapping)
+    print(
+        f"- Total shortcut entries: {total_shortcuts}\n"
+        f"- Shortcuts with a unique timezone: {unique_zone_shortcuts}\n"
+        f"- Percentage: {percent(unique_zone_shortcuts, total_shortcuts)}%\n"
+    )
 
 
 def generate_metrics_rows(metric_type: str, metrics_dict: Dict) -> List[List]:
@@ -424,7 +436,7 @@ def report_data_statistics(
     print(rst_title("Timezone Statistics", level=2))
     polygons_per_timezone = Counter(poly_zone_ids)
     timezone_metrics = calculate_timezone_metrics(
-        nr_of_zones, nr_of_polygons, polygons_per_timezone, all_tz_names
+        nr_of_zones, nr_of_polygons, polygons_per_timezone
     )
     timezone_rows = generate_metrics_rows("timezone", timezone_metrics)
     print_rst_table(["Timezone Metric", "Value"], timezone_rows)
@@ -454,18 +466,21 @@ def report_file_sizes(output_path: Path) -> None:
         "boundary polygon data": boundary_polygon_file,
         "hole polygon data": hole_polygon_file,
         "shortcuts": get_shortcut_file_path(output_path),
+        "hex_zones": get_hex_zone_file_path(output_path),
     }
     names_and_sizes = {
-        name: get_file_size_in_mb(path) for name, path in names_and_paths.items()
+        name: get_file_size_in_mb(path) for name, path in names_and_paths.items() if path.exists()
     }
     total_space = sum(names_and_sizes.values())
 
     # Create table for file sizes
     headers = ["File Type", "Size (MB)", "Percentage"]
-    rows = [
-        [name, f"{size:.2f}", f"{size / total_space:.2%}"]
-        for name, size in names_and_sizes.items()
-    ]
+    rows = []
+    if total_space > 0:
+        rows = [
+            [name, f"{size:.2f}", f"{size / total_space:.2%}"]
+            for name, size in names_and_sizes.items()
+        ]
 
     # Add total row
     rows.append(["Total", f"{total_space:.2f}", "100.00%"])

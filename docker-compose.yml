@@ -1,0 +1,5 @@
+services:
+  test:
+    build: .
+    # Run tests using pytest.
+    command: pytest
