@@ -1,107 +1,85 @@
-# https://stackoverflow.com/questions/38878088/activate-anaconda-python-environment-from-makefile
-# By default make uses sh to execute commands, and sh doesn't know `source`
-SHELL=/bin/bash
+.PHONY: all clean test build docs
+
+help:
+	@echo "                               _ "
+	@echo "  __ _  ___ _ __   ___ _ __ __| |"
+	@echo " / _\` |/ _ \ '_ \ / _ \ '__/ _\` |"
+	@echo "| (_| |  __/ | | |  __/ | | (_| |"
+	@echo " \__, |\___|_| |_|\___|_|  \__,_|"
+	@echo " |___/                          "
+	@echo ""
+	@echo "Choose a command to run:"
+	@echo ""
+	@echo " build        		builds the wheel and sdist"
+	@echo " install      		installs the package in the current environment"
+	@echo " install-dev  		installs the package in editable mode with all dev dependencies"
+	@echo " test         		runs the tests"
+	@echo " format       		runs black and isort"
+	@echo " lint         		runs the linters"
+	@echo " type-check   		runs mypy"
+	@echo " check        		runs all checks"
+	@echo " docs         		builds the documentation"
+	@echo " clean        		cleans the build artifacts"
+	@echo " data         		downloads and builds the latest timezone data"
+	@echo " flatbuf      		(re-)compiles the flatbuffer schema"
+	@echo " speedtest      	runs the speedtests"
+
+
+# makes the venv available to the make commands
+VIRTUAL_ENV ?= $(shell poetry env info --path)
+PATH := $(VIRTUAL_ENV)/bin:$(PATH)
+
+
+all: install
 
 install:
-	pip install --upgrade pip
-	@echo "installing all specified dependencies..."
-	# NOTE: root package needs to be installed for CLI tests to work!
-	@uv sync --all-groups
+	pip install .[all]
 
-update:
-	@echo "updating and pinning the dependencies specified in 'pyproject.toml':"
-	@uv lock --upgrade
-
-lock:
-	@echo "locking the dependencies specified in 'pyproject.toml':"
-	@uv lock
-
-
-# when dependency resolving gets stuck:
-force_update:
-	@echo "force updating the requirements. removing lock file"
-	@uv cache clean
-	@rm -f uv.lock
-	@echo "pinning the dependencies specified in 'pyproject.toml':"
-	@uv sync --refresh
-
-outdated:
-	@uv pip list --outdated
-
-
-env:
-	# conda env remove -n timezonefinder
-	source $(CONDAROOT)/bin/activate && conda create -n timezonefinder python=3.9 uv -y
-	#	&& conda activate timezonefinder
-	# && make req
-
-parse:
-	uv run python ./scripts/file_converter.py -inp ./tmp/combined-with-oceans.json
-
-data:
-	bash parse_data.sh
+install-dev:
+	pip install -e .[all,dev,test,docs]
 
 test:
-	@uv run pytest
-# 	@uv run pytest -m "integration"
-# 	@uv run pytest -m "not integration"
+	pytest
 
-tox:
-	@uv run tox
+format:
+	black .
+	isort .
 
-hook:
-	@uv run pre-commit install
-	@uv run pre-commit run --all-files
+lint:
+	# stop the build if there are Python syntax errors or undefined names
+	flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+	# exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
+	flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
-hookup:
-	@uv run pre-commit autoupdate
+type-check:
+	mypy .
 
-hook3:
-	@uv run pre-commit clean
+check: lint test type-check
 
 clean:
-	rm -rf .pytest_cache .coverage coverage.xml tests/__pycache__ .mypyp_cache/ .tox
+	rm -rf timezonefinder.egg-info
+	rm -rf dist
+	rm -rf build
+	rm -rf .cache
+	rm -rf .pytest_cache
+	rm -rf .mypy_cache
 
-# compile flatbuffers files:
+build: clean
+	python3 -m build
+
 flatbuf:
-	@echo "Compiling FlatBuffer schemas..."
 	@flatc --python --gen-mutable timezonefinder/flatbuf/polygon_schema.fbs
 	@flatc --python --gen-mutable timezonefinder/flatbuf/shortcut_schema.fbs
 	@flatc --python --gen-mutable timezonefinder/flatbuf/hex_zone_schema.fbs
 
-builsdist:
-	@echo "Building single tar.gz distribution..."
-	uv build -v --sdist
+data:
+	./parse_data.sh
 
-build:
-	rm -rf build dist
-	uv build --python cp38
-	uv build --python cp310
-	uv build --python cp311
-	uv build --python cp312
-	uv build --python cp313
-
-# in order to release a new package version, the commit needs to be tagged with the version number
-release:
-	@echo "tagging the current commit with the version number: $(VERSION)"
-	git tag -a "$(shell uv version --short)" -m "Release $(VERSION)"
-	@echo "pushing the changes to the remote repository"
-	git push origin "$(shell uv version --short)"
-
-rmtag:
-	@echo "removing the tag: $(VERSION)"
-	git tag -d "$(shell uv version --short)"
-	@echo "pushing the changes to the remote repository"
-	git push origin --delete "$(shell uv version --short)"
-
-# documentation generation:
-# https://docs.readthedocs.io/en/stable/intro/getting-started-with-sphinx.html
 docs:
-	(cd docs && make html)
+	$(MAKE) -C docs clean
+	$(MAKE) -C docs html
 
 speedtest:
-	# pytest -s flag: output to console
-	@uv run pytest -s scripts/check_speed_timezone_finding.py::test_timezone_finding_speed -v
-# 	@uv run pytest -s scripts/check_speed_initialisation.py -v
+	pytest scripts/check_speed_timezone_finding.py
 
 .PHONY: clean test build docs
