@@ -1,5 +1,5 @@
 services:
   test:
     build: .
-    # Run tests using pytest.
-    command: pytest
+    # Run tests using pytest, and then run the speedtest script.
+    command: bash -c "pytest && pytest scripts/check_speed_timezone_finding.py"
