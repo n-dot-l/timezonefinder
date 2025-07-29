@@ -1,0 +1,15 @@
+namespace timezonefinder.flatbuf;
+
+// mapping from h3 hexagon id to a unique zone id, when only one zone exists in the cell
+table UniqueZoneShortcutEntry {
+  // H3 hexagon ID, uint64
+  hex_id:ulong;
+  // Unique zone ID (uint16) in this hexagon
+  zone_id:ushort;
+}
+
+table UniqueZoneShortcutCollection {
+  entries:[UniqueZoneShortcutEntry];
+}
+
+root_type UniqueZoneShortcutCollection;
