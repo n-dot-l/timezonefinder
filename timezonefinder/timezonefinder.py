@@ -5,6 +5,7 @@ from typing import Dict, Iterable, List, Optional, Tuple, Union
 import numpy as np
 from h3.api import numpy_int as h3
 
+from timezonefinder.flatbuf.hex_zone_utils import HexZoneManager
 from timezonefinder.np_binary_helpers import (
     get_zone_ids_path,
     get_zone_positions_path,
@@ -35,6 +36,7 @@ class AbstractTimezoneFinder(ABC):
     __slots__ = [
         "data_location",
         "shortcut_mapping",
+        "hex_zone_manager",
         "in_memory",
         "_fromfile",
         "timezone_names",
@@ -65,6 +67,11 @@ class AbstractTimezoneFinder(ABC):
         self.data_location: Path = Path(bin_file_location)
 
         self.timezone_names = read_zone_names(self.data_location)
+
+        try:
+            self.hex_zone_manager = HexZoneManager(self.data_location, in_memory=in_memory)
+        except FileNotFoundError:
+            self.hex_zone_manager = None
 
         path2shortcut_bin = get_shortcut_file_path(self.data_location)
         self.shortcut_mapping = read_shortcuts_binary(path2shortcut_bin)
@@ -179,12 +186,17 @@ class AbstractTimezoneFinder(ABC):
         :param lat: The latitude of the point in degrees (90.0 to -90.0).
         :return: The unique zone ID or None if no polygons exist in the shortcut.
         """
-        polys = self.get_boundaries_in_shortcut(lng=lng, lat=lat)
-        if len(polys) == 0:
+        hex_id = h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)
+        if self.hex_zone_manager is not None:
+            return self.hex_zone_manager.get_zone_id(hex_id)
+
+        # Fallback for old data where hex_zones.fbs is not present
+        polys = self.shortcut_mapping.get(hex_id, [])
+        if not polys:
             return None
         if len(polys) == 1:
             return self.zone_id_of(polys[0])
-        zones = self.zone_ids_of(polys)
+        zones = self.zone_ids_of(np.array(polys))
         zones_unique = np.unique(zones)
         if len(zones_unique) == 1:
             return zones_unique[0]
@@ -468,6 +480,14 @@ class TimezoneFinder(AbstractTimezoneFinder):
         :return: the timezone name of the matched polygon, or None if no match is found.
         """
         lng, lat = utils.validate_coordinates(lng, lat)
+
+        # Use the new hex-zone mapping for a quick answer
+        if self.hex_zone_manager is not None:
+            hex_id = h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)
+            zone_id = self.hex_zone_manager.get_zone_id(hex_id)
+            if zone_id is not None:
+                return self.zone_name_from_id(zone_id)
+
         possible_boundaries = self.get_boundaries_in_shortcut(lng=lng, lat=lat)
         nr_possible_polygons = len(possible_boundaries)
         if nr_possible_polygons == 0:

@@ -84,6 +84,10 @@ from timezonefinder.flatbuf.shortcut_utils import (
     get_shortcut_file_path,
     write_shortcuts_flatbuffers,
 )
+from timezonefinder.flatbuf.hex_zone_utils import (
+    get_hex_zone_file_path,
+    write_hex_zones_flatbuffer,
+)
 from timezonefinder.configs import DEFAULT_DATA_DIR, SHORTCUT_H3_RES
 from timezonefinder.np_binary_helpers import (
     get_xmax_path,
@@ -746,6 +750,19 @@ def parse_data(
     shortcuts = compile_shortcut_mapping()
     output_file = get_shortcut_file_path(output_path)
     write_shortcuts_flatbuffers(shortcuts, output_file)
+
+    # Create and write hex_zones.fbs for shortcuts with a unique timezone
+    hex_zone_mapping = {}
+    for hex_id, poly_ids in shortcuts.items():
+        if not poly_ids:
+            continue
+        # poly_zone_ids is a numpy array, so we can use advanced indexing
+        unique_zone_ids = np.unique(poly_zone_ids[poly_ids])
+        if len(unique_zone_ids) == 1:
+            hex_zone_mapping[hex_id] = int(unique_zone_ids[0])
+
+    hex_zone_file = get_hex_zone_file_path(output_path)
+    write_hex_zones_flatbuffer(hex_zone_mapping, hex_zone_file)
 
     print(f"\n\nfinished parsing timezonefinder data to {output_path}")
 

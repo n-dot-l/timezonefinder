@@ -1,7 +1,7 @@
 import bisect
 import mmap
 from pathlib import Path
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 import flatbuffers
 
@@ -14,6 +14,39 @@ HexZoneEntries = List[HexZoneEntry]
 
 def get_hex_zone_file_path(path: Path) -> Path:
     return path / "hex_zones.fbs"
+
+
+def write_hex_zones_flatbuffer(hex_zones: Dict[int, int], output_path: Path):
+    """writes the hex-zone mapping to a flatbuffer file"""
+    builder = flatbuffers.Builder(1024)
+    entries = []
+
+    # Sort by hex_id for efficient searching (e.g., binary search)
+    sorted_hex_ids = sorted(hex_zones.keys())
+
+    for hex_id in sorted_hex_ids:
+        zone_id = hex_zones[hex_id]
+        HexZoneEntry.Start(builder)
+        HexZoneEntry.AddHexId(builder, hex_id)
+        HexZoneEntry.AddZoneId(builder, zone_id)
+        entry = HexZoneEntry.End(builder)
+        entries.append(entry)
+
+    HexZoneCollection.StartEntriesVector(builder, len(entries))
+    # Add entries in reverse order to the buffer
+    for entry in reversed(entries):
+        builder.PrependUOffsetTRelative(entry)
+    entries_vector = builder.EndVector()
+
+    HexZoneCollection.Start(builder)
+    HexZoneCollection.AddEntries(builder, entries_vector)
+    collection = HexZoneCollection.End(builder)
+
+    builder.Finish(collection)
+    buf = builder.Output()
+
+    with open(output_path, "wb") as f:
+        f.write(buf)
 
 
 class HexZoneManager:
