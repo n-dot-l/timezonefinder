@@ -1,0 +1,9 @@
+# docker-compose.gitelf.yml
+services:
+  test:
+    # Build the image using the custom Dockerfile
+    build:
+      context: .
+      dockerfile: Dockerfile.gitelf
+    # The CMD in the Dockerfile defines the command to run tests.
+    # No explicit 'command' override is needed here unless a different command is desired.

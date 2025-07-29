@@ -1,0 +1,29 @@
+# Dockerfile.gitelf
+FROM python:3.11-slim-bookworm
+
+# Install system dependencies required for building C extensions (cffi)
+# and for 'make' command used in some build steps.
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    build-essential \
+    libffi-dev \
+    clang \
+    make && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install uv (our dependency resolver and package installer)
+RUN pip install uv
+
+# Set the working directory inside the container
+WORKDIR /app
+
+# Copy all project files into the container
+COPY . .
+
+# Install Python dependencies using uv, including all groups (like 'test', 'numba', 'docs')
+# This ensures all necessary packages for testing are available.
+RUN uv sync --all-groups
+
+# Set the default command for the container to run pytest
+# This aligns with the 'test' target in the Makefile
+CMD ["uv", "run", "pytest"]
