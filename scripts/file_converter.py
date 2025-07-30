@@ -84,6 +84,7 @@ from timezonefinder.flatbuf.shortcut_utils import (
     get_shortcut_file_path,
     write_shortcuts_flatbuffers,
 )
+from timezonefinder.flatbuf.hex_zone_utils import write_hex_zones
 from timezonefinder.configs import DEFAULT_DATA_DIR, SHORTCUT_H3_RES
 from timezonefinder.np_binary_helpers import (
     get_xmax_path,
@@ -110,6 +111,7 @@ from timezonefinder.zone_names import write_zone_names
 SHORTCUT_H3_RES = 0 if DEBUG else SHORTCUT_H3_RES
 
 ShortcutMapping = Dict[int, List[int]]
+HexZoneMapping = Dict[int, int]
 
 nr_of_polygons = -1
 nr_of_zones = -1
@@ -581,6 +583,25 @@ def compile_shortcut_mapping() -> ShortcutMapping:
     return shortcuts
 
 
+def compile_hex_zone_mapping(shortcuts: ShortcutMapping) -> HexZoneMapping:
+    """
+    Create a mapping from hex_id to zone_id for all shortcuts that have a unique zone.
+    """
+    print("\ncreating hex-zone mapping for unique zones...")
+    hex_zone_mapping = {}
+    for hex_id, poly_ids in shortcuts.items():
+        if not poly_ids:
+            continue
+        # Get all unique zone_ids for the polygons in this hex cell
+        zone_ids = set(poly_zone_ids[p] for p in poly_ids)
+        if len(zone_ids) == 1:
+            # If there's only one unique zone, add it to the mapping
+            hex_zone_mapping[hex_id] = zone_ids.pop()
+
+    print(f"found {len(hex_zone_mapping):,} hex cells with unique timezones.")
+    return hex_zone_mapping
+
+
 def create_and_write_hole_registry(polynrs_of_holes, output_path):
     """
     Creates a registry mapping each polygon id to a tuple (number of holes, first hole id),
@@ -747,10 +768,14 @@ def parse_data(
     output_file = get_shortcut_file_path(output_path)
     write_shortcuts_flatbuffers(shortcuts, output_file)
 
+    hex_zone_mapping = compile_hex_zone_mapping(shortcuts)
+    write_hex_zones(output_path, hex_zone_mapping)
+
     print(f"\n\nfinished parsing timezonefinder data to {output_path}")
 
     write_data_report(
         shortcuts,
+        hex_zone_mapping,
         output_path,
         nr_of_polygons,
         nr_of_zones,
