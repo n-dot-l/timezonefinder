@@ -1,0 +1,13 @@
+// FlatBuffer schema for timezonefinder hex to zone mapping.
+namespace timezonefinder.flatbuf;
+
+table HexZoneEntry {
+  hex_id: ulong;
+  zone_id: int;
+}
+
+table HexZoneCollection {
+  entries: [HexZoneEntry];
+}
+
+root_type HexZoneCollection;

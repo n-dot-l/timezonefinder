@@ -1,0 +1,43 @@
+# Docker-specific files
+Dockerfile
+docker-compose.yml
+
+# Version control
+.git
+.gitignore
+
+# CI/CD, Editor, & Tooling config
+.github/
+.vscode/
+.editorconfig
+.pre-commit-config.yaml
+readthedocs.yml
+tox.ini
+
+# Python build/cache artifacts
+__pycache__/
+*.py[cod]
+*.so
+build/
+dist/
+*.egg-info/
+.pytest_cache/
+.cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Project directories not needed for testing
+docs/
+examples/
+scripts/
+
+# Other files to exclude, based on test logs
+parse_data.sh
+test_musllinux_wheel.sh
+*.log
+pip-log.txt
+nosetests.xml
+var/
+lib64/
+uv.lock

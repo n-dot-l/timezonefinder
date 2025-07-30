@@ -1,0 +1,7 @@
+services:
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    # The CMD in the Dockerfile is ["pytest", "tests"], so this service
+    # will build the image, run the container, execute the tests, and exit.
