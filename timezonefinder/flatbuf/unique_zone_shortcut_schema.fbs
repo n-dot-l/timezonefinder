@@ -1,0 +1,16 @@
+// Define the UniqueZoneShortcutEntry table
+table UniqueZoneShortcutEntry {
+  h3_id: ulong; // The H3 cell ID
+  zone_id: ushort; // The unique timezone ID associated with this H3 cell
+}
+
+// Define the UniqueZoneShortcutCollection table
+// This will contain a vector of UniqueZoneShortcutEntry
+table UniqueZoneShortcutCollection {
+  entries: [UniqueZoneShortcutEntry];
+}
+
+root_type UniqueZoneShortcutCollection;
+
+file_identifier "UZSC"; // Unique file identifier
+file_extension "uzsc";
