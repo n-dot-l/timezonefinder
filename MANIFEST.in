@@ -1,0 +1,70 @@
+# MANIFEST.in
+# This file specifies which non-code files should be included in the source distribution (sdist)
+# and implicitly guides what gets into the wheel.
+
+# Include everything under the 'timezonefinder' package directory
+# This ensures all Python source files (.py), C source files (.c, .h),
+# data files (.npy, .fbs, .json, .txt), and FlatBuffers compiled files are included.
+recursive-include timezonefinder *
+
+# Exclude specific files and directories that are part of the repository
+# but should not be part of the distributable package (sdist/wheel).
+# These are typically development, testing, documentation, or CI/CD related files.
+
+# Version control and editor specific files
+exclude .git*
+exclude .vscode*
+exclude .editorconfig
+exclude .gitignore
+exclude .python-version
+exclude .coveragerc
+exclude *.iml
+exclude *.iws
+exclude *.DS_Store
+
+# Build artifacts and caches
+exclude build/
+exclude dist/
+exclude *.egg-info/
+exclude *.pytest_cache
+exclude .coverage
+exclude coverage.xml
+exclude .mypy_cache/
+exclude .tox/
+exclude .hypothesis/
+exclude pip-log.txt
+exclude target/
+exclude lib/
+exclude .installed.cfg
+exclude tmp.py # Often a temporary file for testing
+exclude sdist/ # If created by build process
+exclude wheel/ # If created by build process
+exclude *.log
+exclude *.manifest
+exclude *.o
+exclude *.py[cod] # Python compiled bytecode
+
+# CI/CD and project configuration scripts
+exclude .github*
+exclude .pre-commit-config.yaml
+exclude Makefile
+exclude tox.ini
+exclude uv.lock
+exclude parse_data.sh
+exclude readthedocs.yml
+exclude Dockerfile.gitelf
+exclude docker-compose.gitelf.yml
+exclude test_musllinux_wheel.sh
+
+# Documentation, examples, scripts, and tests (not needed for runtime distribution)
+# The `tests/` directory is explicitly kept in `test_package_contents.py`'s comments
+# as something to possibly include. I will exclude it for now based on the `UNWANTED_DIST_PATTERNS`.
+# If it needs to be included, the `UNWANTED_DIST_PATTERNS` in the test should be updated.
+exclude docs/
+exclude examples/
+exclude scripts/
+exclude tests/
+
+# Repository-level documentation/licensing files often listed as unwanted in tests
+exclude CHANGELOG*
+exclude CONTRIBUTING*
