@@ -755,6 +755,12 @@ def write_binary_files(output_path: Path) -> None:
     print("Binary files written successfully")
 
 
+# These functions have been moved to scripts.reporting module
+
+
+# These functions have been moved to scripts.reporting module
+
+
 @time_execution
 def compile_data_files(output_path):
     write_zone_names(all_tz_names, output_path)
@@ -764,12 +770,6 @@ def compile_data_files(output_path):
 
     # Write binary files
     write_binary_files(output_path)
-
-
-# These functions have been moved to scripts.reporting module
-
-
-# These functions have been moved to scripts.reporting module
 
 
 @time_execution

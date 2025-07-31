@@ -34,7 +34,7 @@ RUN uv pip install -e .
 
 # Install test dependencies (pytest and pytest-cov) explicitly into the virtual environment.
 # The previous attempt with '.[dev]' resulted in a warning that the 'dev' extra was not found,
-# leading to pytest not being installed.
+# leading to pytest not be!ing installed.
 # The previous error "uv: not found" occurred because `uv` itself is not installed into the .venv/bin directory,
 # even though it can install packages into it. We should use the globally installed `uv` to manage the venv.
 RUN uv pip install pytest pytest-cov
