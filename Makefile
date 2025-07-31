@@ -71,10 +71,12 @@ flatbuf:
 
 builsdist:
 	@echo "Building single tar.gz distribution..."
+	@make flatbuf
 	uv build -v --sdist
 
 build:
 	rm -rf build dist
+	@make flatbuf
 	uv build --python cp38
 	uv build --python cp310
 	uv build --python cp311

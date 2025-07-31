@@ -29,11 +29,14 @@ exclude .coveragerc
 exclude *.iml
 exclude *.iws
 exclude *.DS_Store
+exclude .idea/ # Explicitly exclude .idea/
+exclude .venv/ # Explicitly exclude .venv/
 
 # Build artifacts and caches
 exclude build/
 exclude dist/
 exclude *.egg-info/
+exclude .eggs/ # Explicitly exclude .eggs/
 exclude *.pytest_cache
 exclude .coverage
 exclude coverage.xml
@@ -41,16 +44,21 @@ exclude .mypy_cache/
 exclude .tox/
 exclude .hypothesis/
 exclude pip-log.txt
+exclude pip-delete-this-directory.txt # Explicitly exclude
 exclude target/
 exclude lib/
 exclude .installed.cfg
 exclude tmp.py # Often a temporary file for testing
+exclude tmp/ # Explicitly exclude
 exclude sdist/ # If created by build process
 exclude wheel/ # If created by build process
 exclude *.log
 exclude *.manifest
 exclude *.o
 exclude *.py[cod] # Python compiled bytecode
+exclude .Python # Explicitly exclude
+exclude env/ # Explicitly exclude
+exclude parts/ # Explicitly exclude
 
 # CI/CD and project configuration scripts
 exclude .github*
