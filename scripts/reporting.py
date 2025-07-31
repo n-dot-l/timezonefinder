@@ -9,7 +9,8 @@ from pathlib import Path
 from typing import Callable, Dict, List
 
 
-from scripts.configs import DATA_REPORT_FILE
+import h3.api.numpy_int as h3
+from scripts.configs import DATA_REPORT_FILE, SHORTCUT_H3_RES
 from scripts.utils import percent
 from timezonefinder.flatbuf.polygon_utils import get_coordinate_path
 from timezonefinder.flatbuf.shortcut_utils import get_shortcut_file_path
@@ -142,6 +143,26 @@ def print_shortcut_statistics(mapping: Dict[int, List[int]], poly_zone_ids: List
         amount_of_different_zones.append(amount_of_distinct_zones)
 
     print_frequencies(amount_of_different_zones, "timezones/shortcut")
+
+
+@redirect_output_to_file(DATA_REPORT_FILE)
+def print_unique_zone_shortcut_statistics(unique_zone_shortcut_mapping: Dict[int, int], total_indexed_cells: int):
+    print(rst_title("Unique Zone Shortcut Statistics", level=1))
+
+    nr_of_unique_shortcuts = len(unique_zone_shortcut_mapping)
+
+    percentage_unique = round(
+        (nr_of_unique_shortcuts / total_indexed_cells) * 100, 2
+    ) if total_indexed_cells > 0 else 0
+
+    print_rst_table(
+        ["Metric", "Value"],
+        [
+            ["Number of unique zone shortcuts", f"{nr_of_unique_shortcuts:,}"],
+            ["Total indexed H3 cells", f"{total_indexed_cells:,}"],
+            ["Percentage of indexed cells with unique zone", f"{percentage_unique}%"]
+        ]
+    )
 
 
 def generate_metrics_rows(metric_type: str, metrics_dict: Dict) -> List[List]:
@@ -454,6 +475,7 @@ def report_file_sizes(output_path: Path) -> None:
         "boundary polygon data": boundary_polygon_file,
         "hole polygon data": hole_polygon_file,
         "shortcuts": get_shortcut_file_path(output_path),
+        "unique zone shortcuts": get_unique_zone_shortcut_file_path(output_path),
     }
     names_and_sizes = {
         name: get_file_size_in_mb(path) for name, path in names_and_paths.items()
@@ -476,6 +498,8 @@ def report_file_sizes(output_path: Path) -> None:
 
 def write_data_report(
     shortcuts: Dict[int, List[int]],
+    unique_zone_shortcuts: Dict[int, int],
+    total_indexed_cells: int,
     output_path: Path,
     nr_of_polygons: int,
     nr_of_zones: int,
@@ -490,6 +514,8 @@ def write_data_report(
 
     Args:
         shortcuts: Mapping of hexagon IDs to polygon IDs
+        unique_zone_shortcuts: Mapping of hexagon IDs to unique zone IDs
+        total_indexed_cells: Total number of H3 cells used in the spatial index
         output_path: Path to the output directory
         nr_of_polygons: Number of boundary polygons
         nr_of_zones: Number of timezone zones
@@ -514,4 +540,5 @@ def write_data_report(
         all_tz_names,
     )
     print_shortcut_statistics(shortcuts, poly_zone_ids)
+    print_unique_zone_shortcut_statistics(unique_zone_shortcuts, total_indexed_cells)
     report_file_sizes(output_path)
