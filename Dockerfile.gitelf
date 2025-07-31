@@ -24,21 +24,14 @@ COPY . .
 # Create a virtual environment using uv.
 RUN uv venv
 
-# Compile FlatBuffers schemas BEFORE installing the project,
-# as the generated Python files are part of the package.
-RUN make flatbuf
-
-# DEBUG: Check if FlatBuffers files are generated and importable
-# Add /app to PYTHONPATH so Python can find the timezonefinder package
-RUN PYTHONPATH=/app python3 -c "import timezonefinder.flatbuf.UniqueZoneShortcutEntry"
-
 # Install the current project in editable mode.
-# This will handle the compilation of C extensions.
+# This will handle the compilation of C extensions and install all project dependencies.
 RUN uv pip install -e .
 
+# Compile FlatBuffers schemas AFTER installing the project and its dependencies,
+# as the generated Python files are part of the package and might have dependencies
+# on other installed packages (like numpy, imported by timezonefinder.py).
+RUN make flatbuf
+
 # Install test dependencies (pytest and pytest-cov) explicitly into the virtual environment.
-# The previous attempt with '.[dev]' resulted in a warning that the 'dev' extra was not found,
-# leading to pytest not be!ing installed.
-# The previous error "uv: not found" occurred because `uv` itself is not installed into the .venv/bin directory,
-# even though it can install packages into it. We should use the globally installed `uv` to manage the venv.
 RUN uv pip install pytest pytest-cov
