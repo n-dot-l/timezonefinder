@@ -29,8 +29,8 @@ RUN uv venv
 RUN make flatbuf
 
 # DEBUG: Check if FlatBuffers files are generated and importable
-RUN ls -la timezonefinder/flatbuf/
-RUN python3 -c "import timezonefinder.flatbuf.UniqueZoneShortcutEntry"
+# Add /app to PYTHONPATH so Python can find the timezonefinder package
+RUN PYTHONPATH=/app python3 -c "import timezonefinder.flatbuf.UniqueZoneShortcutEntry"
 
 # Install the current project in editable mode.
 # This will handle the compilation of C extensions.
