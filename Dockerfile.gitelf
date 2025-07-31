@@ -3,10 +3,13 @@ FROM python:3.10-slim-bullseye
 # Install system dependencies required for building C extensions (like `build-essential` for gcc)
 # and Python development headers (`python3-dev`).
 # Add flatbuffers-compiler for compiling .fbs schemas.
+# Add curl and unzip for downloading and extracting timezone data in parse_data.sh.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     python3-dev \
     flatbuffers-compiler \
+    curl \
+    unzip \
     && rm -rf /var/lib/apt/lists/*
 
 # Install `uv` which is used for fast dependency management and installation.
@@ -24,14 +27,16 @@ COPY . .
 # Create a virtual environment using uv.
 RUN uv venv
 
-# Install the current project in editable mode.
-# This will handle the compilation of C extensions and install all project dependencies.
-RUN uv pip install -e .
-
-# Compile FlatBuffers schemas AFTER installing the project and its dependencies,
-# as the generated Python files are part of the package and might have dependencies
-# on other installed packages (like numpy, imported by timezonefinder.py).
+# Compile FlatBuffers schemas into Python files.
 RUN make flatbuf
+
+# Generate the timezone data files (binaries, JSON, text files) that are part of the package.
+RUN bash parse_data.sh
+
+# Install the current project in editable mode.
+# This will handle the compilation of C extensions and install all project dependencies,
+# now with all generated FlatBuffer Python files and data files available.
+RUN uv pip install -e .
 
 # Install test dependencies (pytest and pytest-cov) explicitly into the virtual environment.
 RUN uv pip install pytest pytest-cov
