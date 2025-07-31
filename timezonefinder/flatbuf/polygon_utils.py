@@ -112,7 +112,7 @@ def get_polygon_collection(buf: Union[bytes, mmap.mmap]) -> PolygonCollection:
 
     Returns: PolygonCollection
     """
-    return PolygonCollection.GetRootAs(buf, 0)
+    return PolygonCollection.GetRootAsPolygonCollection(buf, 0)
 
 
 def read_polygon_array_from_binary(
@@ -122,9 +122,9 @@ def read_polygon_array_from_binary(
     # value checks not required as this is a private function
     # processed polygon indices are expected to be in range
     # nr_polygons = collection.PolygonsLength()
-    # if idx >= nr_polygons:
+    # if idx >= nr_of_polygons:
     #     raise IndexError(
-    #         f"Index {idx} out of bounds for collection with {nr_polygons} polygons."
+    #         f"Index {idx} out of bounds for collection with {nr_of_polygons} polygons."
     #     )
     poly = poly_collection.Polygons(idx)
     coords = poly.CoordsAsNumpy()  # flat 1D array of coordinates
