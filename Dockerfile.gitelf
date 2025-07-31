@@ -2,9 +2,11 @@ FROM python:3.10-slim-bullseye
 
 # Install system dependencies required for building C extensions (like `build-essential` for gcc)
 # and Python development headers (`python3-dev`).
+# Add flatbuffers-compiler for compiling .fbs schemas.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     python3-dev \
+    flatbuffers-compiler \
     && rm -rf /var/lib/apt/lists/*
 
 # Install `uv` which is used for fast dependency management and installation.
@@ -21,6 +23,10 @@ COPY . .
 
 # Create a virtual environment using uv.
 RUN uv venv
+
+# Compile FlatBuffers schemas BEFORE installing the project,
+# as the generated Python files are part of the package.
+RUN make flatbuf
 
 # Install the current project in editable mode.
 # This will handle the compilation of C extensions.
