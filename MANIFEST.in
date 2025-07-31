@@ -7,6 +7,14 @@
 # data files (.npy, .fbs, .json, .txt), and FlatBuffers compiled files are included.
 recursive-include timezonefinder *
 
+# Explicitly include FlatBuffers generated Python files for all schemas
+include timezonefinder/flatbuf/Polygon.py
+include timezonefinder/flatbuf/PolygonCollection.py
+include timezonefinder/flatbuf/ShortcutEntry.py
+include timezonefinder/flatbuf/ShortcutCollection.py
+include timezonefinder/flatbuf/UniqueZoneShortcutEntry.py
+include timezonefinder/flatbuf/UniqueZoneShortcutCollection.py
+
 # Exclude specific files and directories that are part of the repository
 # but should not be part of the distributable package (sdist/wheel).
 # These are typically development, testing, documentation, or CI/CD related files.
