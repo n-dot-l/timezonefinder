@@ -1,0 +1,11 @@
+version: '3.8'
+services:
+  test:
+    # Build the Docker image using the `Dockerfile.gitelf` in the current context.
+    build:
+      context: .
+      dockerfile: Dockerfile.gitelf
+    # Override the default command in the Dockerfile to specifically run the test suite.
+    # The `pytest` command with `--cov` flags will run tests and generate a coverage report.
+    # Explicitly use the pytest executable from the virtual environment.
+    command: /app/.venv/bin/pytest --cov=timezonefinder --cov-report=term-missing

@@ -1,0 +1,34 @@
+FROM python:3.10-slim-bullseye
+
+# Install system dependencies required for building C extensions (like `build-essential` for gcc)
+# and Python development headers (`python3-dev`).
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    python3-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install `uv` which is used for fast dependency management and installation.
+RUN pip install uv
+
+# Set the working directory inside the container.
+WORKDIR /app
+
+# Copy `uv.lock` and `pyproject.toml` first to leverage Docker layer caching.
+# Then, copy the entire project source code immediately after,
+# so that all necessary files are present for `uv sync` and `uv pip install -e .`.
+COPY uv.lock pyproject.toml ./
+COPY . .
+
+# Create a virtual environment using uv.
+RUN uv venv
+
+# Install the current project in editable mode.
+# This will handle the compilation of C extensions.
+RUN uv pip install -e .
+
+# Install test dependencies (pytest and pytest-cov) explicitly into the virtual environment.
+# The previous attempt with '.[dev]' resulted in a warning that the 'dev' extra was not found,
+# leading to pytest not being installed.
+# The previous error "uv: not found" occurred because `uv` itself is not installed into the .venv/bin directory,
+# even though it can install packages into it. We should use the globally installed `uv` to manage the venv.
+RUN uv pip install pytest pytest-cov
