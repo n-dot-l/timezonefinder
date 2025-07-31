@@ -10,10 +10,12 @@ from typing import Callable, Dict, List
 
 
 import h3.api.numpy_int as h3
-from scripts.configs import DATA_REPORT_FILE, SHORTCUT_H3_RES
+from scripts.configs import DATA_REPORT_FILE
 from scripts.utils import percent
 from timezonefinder.flatbuf.polygon_utils import get_coordinate_path
 from timezonefinder.flatbuf.shortcut_utils import get_shortcut_file_path
+from timezonefinder.flatbuf.unique_zone_shortcut_utils import get_unique_zone_shortcut_file_path
+from timezonefinder.configs import SHORTCUT_H3_RES # Import SHORTCUT_H3_RES from timezonefinder.configs
 from timezonefinder.utils import (
     get_holes_dir,
     get_boundaries_dir,
