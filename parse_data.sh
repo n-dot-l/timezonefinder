@@ -51,6 +51,10 @@ SCRIPT_PATH=./scripts/file_converter.py
 echo "calling $SCRIPT_PATH:"
 python "$SCRIPT_PATH" -inp "$JSON_PATH" -out "$DESTINATION_PATH"
 
+echo "generating unique zone mapping..."
+UNIQUE_ZONE_SCRIPT_PATH=./scripts/unique_zone_generator.py
+python "$UNIQUE_ZONE_SCRIPT_PATH" -out "$DESTINATION_PATH"
+
 echo "runnings tests..."
 if ! tox; then
     # assert that all tests are passing
