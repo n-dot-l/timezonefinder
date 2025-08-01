@@ -1,0 +1,8 @@
+version: '3.8'
+services:
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile.gitelf
+    # The 'test' target in the Makefile and the [testenv] in tox.ini use pytest.
+    command: uv run pytest

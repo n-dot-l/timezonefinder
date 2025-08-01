@@ -1,0 +1,20 @@
+FROM python:3.11-slim
+
+# Install system dependencies needed for building C extensions (like CFFI)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    libffi-dev \
+    clang \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install uv, the project's package manager
+RUN pip install uv
+
+WORKDIR /app
+
+# Copy all project files
+COPY . .
+
+# Install all python dependencies using uv
+# --all-groups installs dev, test, docs dependencies etc.
+RUN uv sync --all-groups
