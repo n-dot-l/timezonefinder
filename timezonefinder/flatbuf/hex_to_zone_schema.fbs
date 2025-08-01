@@ -1,0 +1,14 @@
+// schema for mapping from h3 hex id to a unique zone id
+namespace timezonefinder.flatbuf;
+
+// an unsigned 64bit integer for the h3 hex id and the zone id (unsigned 16bit int)
+table HexToZoneEntry {
+  hex_id:ulong;
+  zone_id:ushort;
+}
+
+table HexToZoneCollection {
+  entries:[HexToZoneEntry];
+}
+
+root_type HexToZoneCollection;
