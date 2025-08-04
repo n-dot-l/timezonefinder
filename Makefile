@@ -1,3 +1,4 @@
+```makefile
 # https://stackoverflow.com/questions/38878088/activate-anaconda-python-environment-from-makefile
 # By default make uses sh to execute commands, and sh doesn't know `source`
 SHELL=/bin/bash
@@ -59,14 +60,12 @@ hookup:
 hook3:
 	@uv run pre-commit clean
 
-clean:
-	rm -rf .pytest_cache .coverage coverage.xml tests/__pycache__ .mypyp_cache/ .tox
-
 # compile flatbuffers files:
 flatbuf:
 	@echo "Compiling FlatBuffer schemas..."
 	@flatc --python --gen-mutable timezonefinder/flatbuf/polygon_schema.fbs
 	@flatc --python --gen-mutable timezonefinder/flatbuf/shortcut_schema.fbs
+	@flatc --python --gen-mutable timezonefinder/flatbuf/hex_unique_zone_schema.fbs
 
 builsdist:
 	@echo "Building single tar.gz distribution..."

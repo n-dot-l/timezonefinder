@@ -1,3 +1,4 @@
+```python
 """
 script for parsing the timezone data from https://github.com/evansiroky/timezone-boundary-builder to the binary format required by `timezonefinder`
 
@@ -83,6 +84,10 @@ from timezonefinder.flatbuf.polygon_utils import (
 from timezonefinder.flatbuf.shortcut_utils import (
     get_shortcut_file_path,
     write_shortcuts_flatbuffers,
+)
+from timezonefinder.flatbuf.hex_unique_zone_utils import (
+    get_unique_zone_file_path,
+    write_unique_zone_flatbuffers,
 )
 from timezonefinder.configs import DEFAULT_DATA_DIR, SHORTCUT_H3_RES
 from timezonefinder.np_binary_helpers import (
@@ -518,7 +523,7 @@ def optimise_shortcut_ordering(poly_ids: List[int]) -> List[int]:
     return poly_ids_sorted
 
 
-def compile_h3_map(candidates: Set) -> ShortcutMapping:
+def compile_h3_map(candidates: Set) -> Tuple[ShortcutMapping, Dict[int, int]]:
     """
     operate on one hex resolution
     also store results separately to divide the output data files
@@ -529,6 +534,7 @@ def compile_h3_map(candidates: Set) -> ShortcutMapping:
     poly_zone_ids = np.array(poly_zone_ids, dtype=DTYPE_FORMAT_H_NUMPY)
 
     mapping: ShortcutMapping = {}
+    unique_zone_mapping: Dict[int, int] = {}
     total_candidates = len(candidates)
 
     def report_progress():
@@ -544,13 +550,19 @@ def compile_h3_map(candidates: Set) -> ShortcutMapping:
         hex_id = candidates.pop()
         cell = get_hex(hex_id)
         polys = list(cell.polys_in_cell)
+
+        # unique zone check
+        zones_in_cell = cell.zones_in_cell
+        if len(zones_in_cell) == 1:
+            unique_zone_mapping[hex_id] = zones_in_cell.pop()
+
         # TODO separate optimisation into separate function
         polys_optimised = optimise_shortcut_ordering(polys)
         check_shortcut_sorting(polys_optimised, poly_zone_ids)
         mapping[hex_id] = polys_optimised
         report_progress()
 
-    return mapping
+    return mapping, unique_zone_mapping
 
 
 def all_res_candidates(res: int) -> HexIdSet:
@@ -563,10 +575,10 @@ def all_res_candidates(res: int) -> HexIdSet:
 
 
 @time_execution
-def compile_shortcut_mapping() -> ShortcutMapping:
+def compile_shortcut_mapping() -> Tuple[ShortcutMapping, Dict[int, int]]:
     """compiles h3 hexagon shortcut mapping
 
-    returns: mapping from hexagon id to list of polygon ids
+    returns: mapping from hexagon id to list of polygon ids, and mapping from hexagon id to unique zone id
 
     cf. https://eng.uber.com/h3/
     """
@@ -576,9 +588,9 @@ def compile_shortcut_mapping() -> ShortcutMapping:
         f"reached desired resolution {SHORTCUT_H3_RES}.\n"
         "storing mapping to timezone polygons for every hexagon candidate at this resolution (-> 'full coverage')"
     )
-    shortcuts = compile_h3_map(candidates=candidates)
+    shortcuts, unique_zone_mapping = compile_h3_map(candidates=candidates)
     # Shortcut statistics will be printed in the reporting module
-    return shortcuts
+    return shortcuts, unique_zone_mapping
 
 
 def create_and_write_hole_registry(polynrs_of_holes, output_path):
@@ -743,9 +755,14 @@ def parse_data(
     parse_polygons_from_json(input_path)
 
     compile_data_files(output_path)
-    shortcuts = compile_shortcut_mapping()
+    shortcuts, unique_zone_mapping = compile_shortcut_mapping()
+
     output_file = get_shortcut_file_path(output_path)
     write_shortcuts_flatbuffers(shortcuts, output_file)
+
+    unique_zone_output_file = get_unique_zone_file_path(output_path)
+    write_unique_zone_flatbuffers(unique_zone_mapping, unique_zone_output_file)
+
 
     print(f"\n\nfinished parsing timezonefinder data to {output_path}")
 
