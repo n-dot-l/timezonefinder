@@ -1,4 +1,3 @@
-```python
 """
 Utility functions for working with unique zone data in FlatBuffers.
 """

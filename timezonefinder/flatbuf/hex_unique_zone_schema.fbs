@@ -1,4 +1,3 @@
-```fbs
 namespace timezonefinder.flatbuf;
 
 // mapping from hex id to a unique zone id

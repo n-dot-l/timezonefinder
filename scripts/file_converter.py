@@ -1,4 +1,3 @@
-```python
 """
 script for parsing the timezone data from https://github.com/evansiroky/timezone-boundary-builder to the binary format required by `timezonefinder`
 
