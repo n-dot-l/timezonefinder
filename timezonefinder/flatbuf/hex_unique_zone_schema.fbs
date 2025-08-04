@@ -1,0 +1,15 @@
+namespace timezonefinder.flatbuf;
+
+// mapping from hex id to a unique zone id
+table HexUniqueZoneEntry {
+  // H3 hexagon ID, uint64
+  hex_id:ulong;
+  // unique zone ID (uint16) in this hexagon
+  zone_id:ushort;
+}
+
+table HexUniqueZoneCollection {
+  entries:[HexUniqueZoneEntry];
+}
+
+root_type HexUniqueZoneCollection;
