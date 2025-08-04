@@ -1,4 +1,3 @@
-```python
 """
 Utility functions for working with hex-to-zone-ID mapping data in FlatBuffers.
 This mapping stores shortcuts for H3 cells that contain only a single timezone.
