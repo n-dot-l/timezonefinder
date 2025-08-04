@@ -82,6 +82,8 @@ def read_unique_zone_binary(
     Returns:
         Dictionary mapping H3 hexagon IDs to unique zone IDs
     """
+    if not file_path.exists():
+        return {}
     with open(file_path, "rb") as f:
         buf = f.read()
 

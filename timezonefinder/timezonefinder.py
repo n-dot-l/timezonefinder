@@ -74,7 +74,6 @@ class AbstractTimezoneFinder(ABC):
         path2shortcut_bin = get_shortcut_file_path(self.data_location)
         self.shortcut_mapping = read_shortcuts_binary(path2shortcut_bin)
 
-        # TODO only create this file when it exists to be backwards compatible with old data
         path2unique_zone_bin = get_unique_zone_file_path(self.data_location)
         self.unique_zone_mapping = read_unique_zone_binary(path2unique_zone_bin)
 
