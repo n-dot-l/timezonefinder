@@ -497,8 +497,21 @@ class TimezoneFinder(AbstractTimezoneFinder):
             return self.zone_name_from_id(unique_zone_id)
 
         possible_boundaries = self.get_boundaries_in_shortcut(lng=lng, lat=lat)
-        if not possible_boundaries.any():
+        nr_possible_polygons = len(possible_boundaries)
+        if nr_possible_polygons == 0:
+            # Note: hypothetical case, with ocean data every shortcut maps to at least one boundary polygon
             return None
+        if nr_possible_polygons == 1:
+            # there is only one boundary polygon in that area. return its timezone name without further checks
+            boundary_id = possible_boundaries[0]
+            return self.zone_name_from_boundary_id(boundary_id)
+
+        # create a list of all the timezone ids of all possible boundary polygons
+        zone_ids = self.zone_ids_of(possible_boundaries)
+
+        last_zone_change_idx = utils.get_last_change_idx(zone_ids)
+        if last_zone_change_idx == 0:
+            return self.zone_name_from_id(zone_ids[0])
 
         # ATTENTION: the polygons are stored converted to 32-bit ints,
         # convert the query coordinates in the same fashion in order to make the data formats match
@@ -506,13 +519,20 @@ class TimezoneFinder(AbstractTimezoneFinder):
         x = utils.coord2int(lng)
         y = utils.coord2int(lat)
 
-        # check all candidate polygons
-        for boundary_id in possible_boundaries:
-            if self.inside_of_polygon(boundary_id, x, y):
-                return self.zone_name_from_boundary_id(boundary_id)
+        # check until the point is included in one of the possible boundary polygons
+        for i, boundary_id in enumerate(possible_boundaries):
+            if i >= last_zone_change_idx:
+                break
 
-        # Should not be reached with ocean data, because a point is always inside a (ocean) polygon
-        return None
+            if self.inside_of_polygon(boundary_id, x, y):
+                zone_id = zone_ids[i]
+                return self.zone_name_from_id(zone_id)
+
+        # since it is the last possible option,
+        # the polygons of the last possible zone don't actually have to be checked
+        # -> instantly return the last zone
+        zone_id = zone_ids[-1]
+        return self.zone_name_from_id(zone_id)
 
     def certain_timezone_at(self, *, lng: float, lat: float) -> Optional[str]:
         """checks in which timezone polygon the point is certainly included in
