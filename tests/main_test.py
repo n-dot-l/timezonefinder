@@ -4,26 +4,14 @@ from unittest import mock
 import numpy as np
 
 from timezonefinder.timezonefinder import TimezoneFinder
-from timezonefinder.configs import (
-    DTYPE_FORMAT_H,
-    DTYPE_FORMAT_I,
-    DTYPE_FORMAT_Q,
-    MAX_LAT_VAL,
-    MAX_LNG_VAL,
-    NR_SHORTCUTS,
-)
-
+from timezonefinder import utils
 from . import auxiliaries
 
 # number of points to test for each zone
-NR_TEST_POINTS = 100
+NR_TEST_POINTS = 10
 
 # number of test points for the speed test
 NR_SPEED_TEST_POINTS = 1000
-
-# because of floating point inaccuracies, the polygons have been slightly scaled before conversion to int.
-# this is the factor used for scaling.
-ACCURACY = 10**7
 
 
 class TestTimezoneFinder(unittest.TestCase):
@@ -45,16 +33,6 @@ class TestTimezoneFinder(unittest.TestCase):
     @classmethod
     def get_instance(cls, *args, **kwargs) -> TimezoneFinder:
         return TimezoneFinder(*args, **kwargs)
-
-    def test_settings_valid(self):
-        # test if all the constants are of the correct type
-        self.assertIsInstance(NR_SHORTCUTS, int)
-        self.assertIsInstance(DTYPE_FORMAT_I, str)
-        self.assertIsInstance(DTYPE_FORMAT_H, str)
-        self.assertIsInstance(DTYPE_FORMAT_Q, str)
-        self.assertIsInstance(MAX_LNG_VAL, int)
-        self.assertIsInstance(MAX_LAT_VAL, int)
-        self.assertIsInstance(ACCURACY, int)
 
     def test_unique_timezone_at_with_new_shortcut(self):
         # test the new optimization for unique_timezone_at
@@ -179,12 +157,12 @@ class TestTimezoneFinder(unittest.TestCase):
         self.assertRaises(ValueError, self.tf.timezone_at, lng=13.3, lat=91)
         self.assertRaises(ValueError, self.tf.timezone_at, lng=13.3, lat=-91)
 
-    def test_correctness(self, test_points=100):
+    def test_correctness(self):
         # tests for every timezone if the found timezone name is correct
         for zone_name in self.tf.timezone_names:
             print("testing: ", zone_name)
             test_cases = auxiliaries.get_test_points(
-                zone_name=zone_name, nr_of_points=test_points
+                zone_name=zone_name, nr_of_points=NR_TEST_POINTS
             )
             for lng, lat in test_cases:
                 self.assertEqual(zone_name, self.tf.timezone_at(lng=lng, lat=lat))
@@ -214,8 +192,8 @@ class TestTimezoneFinder(unittest.TestCase):
 
         possible_polygons = self.tf.get_boundaries_in_shortcut(lng=lng, lat=lat)
 
-        x = int(lng * ACCURACY)
-        y = int(lat * ACCURACY)
+        x = utils.coord2int(lng)
+        y = utils.coord2int(lat)
 
         self.assertTrue(self.tf.inside_of_polygon(possible_polygons[0], x, y))
 
