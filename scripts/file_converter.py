@@ -157,14 +157,16 @@ class Boundaries(NamedTuple):
 
 
 def compile_bboxes(coord_list: List[np.ndarray]) -> List[Boundaries]:
-    print("compiling the bounding boxes of the polygons from the coordinates...")
+    """compiling the bounding boxes of the polygons from the coordinates..."""
     boundaries = []
     for coords in coord_list:
-        x_coords, y_coords = coords
-        y_coords = coords[1]
-        bounds = Boundaries(
-            np.max(x_coords), np.min(x_coords), np.max(y_coords), np.min(y_coords)
-        )
+        if coords.shape[1] == 0:
+            bounds = Boundaries(0, 0, 0, 0)
+        else:
+            x_coords, y_coords = coords
+            bounds = Boundaries(
+                np.max(x_coords), np.min(x_coords), np.max(y_coords), np.min(y_coords)
+            )
         boundaries.append(bounds)
     return boundaries
 
@@ -648,7 +650,9 @@ def convert_bboxes_to_numpy(
     return xmax, xmin, ymax, ymin
 
 
-def write_numpy_binaries(output_path):
+def write_numpy_binaries(
+    output_path, polygons_to_write: List[np.ndarray], holes_to_write: List[np.ndarray]
+):
     print("Writing binary data to separate Numpy binary .npy files...")
     # some properties are very small but essential for the performance of the package
     # -> store them directly as numpy arrays (overhead is negligible) and read them into memory at runtime
@@ -673,10 +677,13 @@ def write_numpy_binaries(output_path):
     holes_dir.mkdir(parents=True, exist_ok=True)
     boundaries_dir.mkdir(parents=True, exist_ok=True)
 
-    hole_boundaries = compile_bboxes(holes)
+    poly_boundaries_to_write = compile_bboxes(polygons_to_write)
+    hole_boundaries_to_write = compile_bboxes(holes_to_write)
+
     # save 4 bbox vectors for holes and polygons to the respective directories
     for dir, bounds in zip(
-        [holes_dir, boundaries_dir], [hole_boundaries, poly_boundaries]
+        [holes_dir, boundaries_dir],
+        [hole_boundaries_to_write, poly_boundaries_to_write],
     ):
         # Convert Boundaries to numpy arrays
         boundary_xmax, boundary_xmin, boundary_ymax, boundary_ymin = (
@@ -691,7 +698,11 @@ def write_numpy_binaries(output_path):
     print("Numpy binary files written successfully")
 
 
-def write_flatbuffer_files(output_path: Path):
+def write_flatbuffer_files(
+    output_path: Path,
+    polygons_to_write: List[np.ndarray],
+    holes_to_write: List[np.ndarray],
+):
     # separate output directories for holes and boundaries
     holes_dir = get_holes_dir(output_path)
     boundaries_dir = get_boundaries_dir(output_path)
@@ -702,15 +713,19 @@ def write_flatbuffer_files(output_path: Path):
     print("Writing binary data to flatbuffer files...")
     # Write polygon boundary coordinates to flatbuffer
     boundary_polygon_file = get_coordinate_path(boundaries_dir)
-    write_polygon_collection_flatbuffer(boundary_polygon_file, polygons)
+    write_polygon_collection_flatbuffer(boundary_polygon_file, polygons_to_write)
 
     hole_polygon_file = get_coordinate_path(holes_dir)
     # Write holes coordinates to flatbuffer
-    write_polygon_collection_flatbuffer(hole_polygon_file, holes)
+    write_polygon_collection_flatbuffer(hole_polygon_file, holes_to_write)
     print("Flatbuffer files written successfully")
 
 
-def write_binary_files(output_path: Path) -> None:
+def write_binary_files(
+    output_path: Path,
+    polygons_to_write: List[np.ndarray],
+    holes_to_write: List[np.ndarray],
+) -> None:
     """
     Write all binary files for the timezonefinder package.
 
@@ -719,20 +734,24 @@ def write_binary_files(output_path: Path) -> None:
     Args:
         output_path: Directory where binary files will be written
     """
-    write_numpy_binaries(output_path)
-    write_flatbuffer_files(output_path)
+    write_numpy_binaries(output_path, polygons_to_write, holes_to_write)
+    write_flatbuffer_files(output_path, polygons_to_write, holes_to_write)
     print("Binary files written successfully")
 
 
 @time_execution
-def compile_data_files(output_path):
+def compile_data_files(
+    output_path,
+    polygons_to_write: List[np.ndarray],
+    holes_to_write: List[np.ndarray],
+):
     write_zone_names(all_tz_names, output_path)
 
     # Write registry for holes (which polygon each hole belongs to)
     create_and_write_hole_registry(polynrs_of_holes, output_path)
 
     # Write binary files
-    write_binary_files(output_path)
+    write_binary_files(output_path, polygons_to_write, holes_to_write)
 
 
 # These functions have been moved to scripts.reporting module
@@ -751,9 +770,44 @@ def parse_data(
     output_path.mkdir(parents=True, exist_ok=True)
 
     parse_polygons_from_json(input_path)
-
-    compile_data_files(output_path)
     shortcuts, unique_shortcuts = compile_shortcut_mapping()
+
+    # identify polygons which are never checked with a point in polygon test
+    # and can hence be deleted to save space
+    print("identifying polygons which are never checked...")
+    global poly_zone_ids, polygons, holes, polynrs_of_holes, nr_of_polygons
+
+    multi_zone_poly_ids = set()
+    for poly_ids_in_shortcut in shortcuts.values():
+        if not poly_ids_in_shortcut:
+            continue
+
+        zone_ids = poly_zone_ids[poly_ids_in_shortcut]
+        if len(np.unique(zone_ids)) > 1:
+            multi_zone_poly_ids.update(poly_ids_in_shortcut)
+
+    all_poly_ids = set(range(nr_of_polygons))
+    deletable_poly_ids = all_poly_ids - multi_zone_poly_ids
+    print(
+        f"found {len(deletable_poly_ids)} of {nr_of_polygons} polygons to be deletable."
+    )
+
+    polygons_for_writing = list(polygons)
+    for poly_id in deletable_poly_ids:
+        # Replace with empty array
+        polygons_for_writing[poly_id] = np.array(
+            [[], []], dtype=polygons[poly_id].dtype
+        )
+
+    holes_for_writing = list(holes)
+    deletable_hole_indices = {
+        i for i, poly_id in enumerate(polynrs_of_holes) if poly_id in deletable_poly_ids
+    }
+    print(f"deleting coordinates of {len(deletable_hole_indices)} corresponding holes.")
+    for hole_idx in deletable_hole_indices:
+        holes_for_writing[hole_idx] = np.array([[], []], dtype=holes[hole_idx].dtype)
+
+    compile_data_files(output_path, polygons_for_writing, holes_for_writing)
     output_file = get_shortcut_file_path(output_path)
     write_shortcuts_flatbuffers(shortcuts, output_file)
 
