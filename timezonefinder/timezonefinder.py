@@ -186,13 +186,28 @@ class AbstractTimezoneFinder(ABC):
 
         This now first checks a pre-computed mapping for h3 cells with a guaranteed unique zone.
         If the h3 cell is not in the mapping, it means it contains multiple timezone zones.
+        For backwards compatibility, if the mapping file is not present, it falls back to the old logic.
 
         :param lng: The longitude of the point in degrees (-180.0 to 180.0).
         :param lat: The latitude of the point in degrees (90.0 to -90.0).
         :return: The unique zone ID or None if no polygons exist or multiple zones are present.
         """
         hex_id = h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)
-        return self.hex_zone_mapping.get(hex_id)
+
+        if self.hex_zone_mapping:
+            return self.hex_zone_mapping.get(hex_id)
+
+        # Fallback for old data without hex_zone_mapping
+        polys = self.get_boundaries_in_shortcut(lng=lng, lat=lat)
+        if len(polys) == 0:
+            return None
+
+        zones = self.zone_ids_of(polys)
+        zones_unique = np.unique(zones)
+        if len(zones_unique) == 1:
+            return zones_unique[0]
+
+        return None
 
     @abstractmethod
     def timezone_at(self, *, lng: float, lat: float) -> Optional[str]:
@@ -479,21 +494,8 @@ class TimezoneFinder(AbstractTimezoneFinder):
             return self.zone_name_from_id(unique_zone_id)
 
         possible_boundaries = self.get_boundaries_in_shortcut(lng=lng, lat=lat)
-        nr_possible_polygons = len(possible_boundaries)
-        if nr_possible_polygons == 0:
-            # Note: hypothetical case, with ocean data every shortcut maps to at least one boundary polygon
+        if not possible_boundaries.any():
             return None
-        if nr_possible_polygons == 1:
-            # there is only one boundary polygon in that area. return its timezone name without further checks
-            boundary_id = possible_boundaries[0]
-            return self.zone_name_from_boundary_id(boundary_id)
-
-        # create a list of all the timezone ids of all possible boundary polygons
-        zone_ids = self.zone_ids_of(possible_boundaries)
-
-        last_zone_change_idx = utils.get_last_change_idx(zone_ids)
-        if last_zone_change_idx == 0:
-            return self.zone_name_from_id(zone_ids[0])
 
         # ATTENTION: the polygons are stored converted to 32-bit ints,
         # convert the query coordinates in the same fashion in order to make the data formats match
@@ -501,20 +503,13 @@ class TimezoneFinder(AbstractTimezoneFinder):
         x = utils.coord2int(lng)
         y = utils.coord2int(lat)
 
-        # check until the point is included in one of the possible boundary polygons
-        for i, boundary_id in enumerate(possible_boundaries):
-            if i >= last_zone_change_idx:
-                break
-
+        # check all candidate polygons
+        for boundary_id in possible_boundaries:
             if self.inside_of_polygon(boundary_id, x, y):
-                zone_id = zone_ids[i]
-                return self.zone_name_from_id(zone_id)
+                return self.zone_name_from_boundary_id(boundary_id)
 
-        # since it is the last possible option,
-        # the polygons of the last possible zone don't actually have to be checked
-        # -> instantly return the last zone
-        zone_id = zone_ids[-1]
-        return self.zone_name_from_id(zone_id)
+        # Should not be reached with ocean data, because a point is always inside a (ocean) polygon
+        return None
 
     def certain_timezone_at(self, *, lng: float, lat: float) -> Optional[str]:
         """checks in which timezone polygon the point is certainly included in
