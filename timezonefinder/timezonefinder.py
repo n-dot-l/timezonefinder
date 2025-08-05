@@ -269,9 +269,33 @@ class TimezoneFinderL(AbstractTimezoneFinder):
         :return: the timezone name of the most common zone or None if there are no timezone polygons in this shortcut
         """
         lng, lat = utils.validate_coordinates(lng, lat)
-        most_common_id = self.most_common_zone_id(lng=lng, lat=lat)
-        if most_common_id is None:
-            return None
+        hex_id = h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)
+
+        # check direct shortcut first
+        zone_id = self.unique_shortcut_mapping.get(hex_id)
+        if zone_id is not None:
+            return self.zone_name_from_id(zone_id)
+
+        try:
+            polys = self.shortcut_mapping[hex_id]
+        except KeyError:
+            return None  # no polygons for this hex id
+
+        if len(polys) == 0:
+            return None  # no polygons for this hex id
+
+        # check for unique zone from main shortcut file
+        # create a list of all the timezone ids of all possible boundary polygons
+        zones = self.zone_ids_of(polys)
+        zones_unique = np.unique(zones)
+        if len(zones_unique) == 1:
+            return self.zone_name_from_id(zones_unique[0])
+
+        # fallback to most common
+        # Note: boundary polygons are sorted from small to big in the shortcuts (grouped by zone)
+        # -> the boundary polygons of the zone with the most polygon coordinates come last
+        poly_of_biggest_zone = polys[-1]
+        most_common_id = self.zone_id_of(poly_of_biggest_zone)
         return self.zone_name_from_id(most_common_id)
 
 
@@ -550,9 +574,19 @@ class TimezoneFinder(AbstractTimezoneFinder):
         :return: the timezone name of the polygon the point is included in or `None`
         """
         lng, lat = utils.validate_coordinates(lng, lat)
-        possible_boundaries = self.get_boundaries_in_shortcut(lng=lng, lat=lat)
-        nr_possible_boundaries = len(possible_boundaries)
+        hex_id = h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)
 
+        zone_id = self.unique_shortcut_mapping.get(hex_id)
+        if zone_id is not None:
+            return self.zone_name_from_id(zone_id)
+
+        try:
+            possible_boundaries = self.shortcut_mapping[hex_id]
+        except KeyError:
+            # Note: hypothetical case, with ocean data every shortcut maps to at least one boundary polygon
+            return None
+
+        nr_possible_boundaries = len(possible_boundaries)
         if nr_possible_boundaries == 0:
             # Note: hypothetical case, with ocean data every shortcut maps to at least one boundary polygon
             return None
