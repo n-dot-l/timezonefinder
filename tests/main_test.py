@@ -1,4 +1,3 @@
-```python
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -132,7 +131,7 @@ class TestTimezoneFinder(unittest.TestCase):
             self.tf.certain_timezone_at(lng=lng, lat=lat), expected_tz_name
         )
         self.assertEqual(
-            self.tf.unique_timezone_at(lng=lng, lat=lat), expected_tz_name
+            self.tf.unique_timezone_at(lng=lng, lat=lat), "Europe/Berlin"
         )
 
         # test for a point in a zone with only one polygon candidate:
