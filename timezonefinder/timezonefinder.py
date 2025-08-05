@@ -201,6 +201,9 @@ class AbstractTimezoneFinder(ABC):
         polys = self.get_boundaries_in_shortcut(lng=lng, lat=lat)
         if len(polys) == 0:
             return None
+        
+        if len(polys) == 1:
+            return self.zone_id_of(polys[0])
 
         zones = self.zone_ids_of(polys)
         zones_unique = np.unique(zones)
