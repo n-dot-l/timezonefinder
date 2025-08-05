@@ -489,6 +489,14 @@ class TimezoneFinder(AbstractTimezoneFinder):
         :return: the timezone name of the matched polygon, or None if no match is found.
         """
         lng, lat = utils.validate_coordinates(lng, lat)
+
+        # New optimization: check for a guaranteed unique zone in the new mapping.
+        if self.hex_zone_mapping:
+            hex_id = h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)
+            unique_id = self.hex_zone_mapping.get(hex_id)
+            if unique_id is not None:
+                return self.zone_name_from_id(unique_id)
+
         possible_boundaries = self.get_boundaries_in_shortcut(lng=lng, lat=lat)
         nr_possible_polygons = len(possible_boundaries)
         if nr_possible_polygons == 0:
