@@ -1,326 +1,244 @@
-from importlib.util import find_spec
-from typing import Optional
-
+import unittest
+from pathlib import Path
+from unittest import mock
 import numpy as np
-import pytest
 
-from scripts.configs import THRES_DTYPE_H
-from tests.auxiliaries import (
-    check_geometry,
-    check_pairwise_geometry,
-    ocean2land,
-    validate_polygon_coordinates,
-)
-from tests.locations import BASIC_TEST_LOCATIONS, EDGE_TEST_CASES, TEST_LOCATIONS
+from timezonefinder.timezonefinder import TimezoneFinder
 from timezonefinder.configs import (
-    INT2COORD_FACTOR,
+    DTYPE_FORMAT_H,
+    DTYPE_FORMAT_I,
+    DTYPE_FORMAT_Q,
+    MAX_LAT_VAL,
+    MAX_LNG_VAL,
+    NR_SHORTCUTS,
 )
-from timezonefinder.polygon_array import PolygonArray
-from timezonefinder.timezonefinder import (
-    AbstractTimezoneFinder,
-    TimezoneFinder,
-    TimezoneFinderL,
-)
-from timezonefinder.utils import get_boundaries_dir, is_ocean_timezone
 
-DEBUG = False
-# more extensive testing (e.g. get geometry for every single zone), switch off for CI/CD
-# DEBUG = True
+from . import auxiliaries
 
-PACKAGE_NAME = "timezonefinder"
+# number of points to test for each zone
+NR_TEST_POINTS = 100
 
-boundaries_dir = get_boundaries_dir()
-boundaries = PolygonArray(data_location=boundaries_dir, in_memory=False)
-NR_TZ_POLYGONS = len(boundaries)
+# number of test points for the speed test
+NR_SPEED_TEST_POINTS = 1000
 
-NR_STARTUPS_PER_CLASS = 1
-
-class_under_test = TimezoneFinder
-tf: AbstractTimezoneFinder = class_under_test()
-in_memory_mode = False
-
-RESULT_TEMPLATE = "{0:25s} | {1:20s} | {2:20s} | {3:2s}"
+# because of floating point inaccuracies, the polygons have been slightly scaled before conversion to int.
+# this is the factor used for scaling.
+ACCURACY = 10**7
 
 
-# tests for both classes: TimezoneFinderL and TimezoneFinder
-class TestBaseTimezoneFinderClass:
-    class_under_test = TimezoneFinderL
-    # NOTE: setting memory mode does not make a difference for TimezoneFinderL (relevant only for polygon data)
-    in_memory_mode = False
-    bin_file_dir = None
-    on_land_pt_fct_name = "timezone_at"
-    test_locations = BASIC_TEST_LOCATIONS
-
-    def test_using_numba(self):
-        spec = find_spec("numba")
-        numba_installed = spec is not None
-        assert self.test_instance.using_numba() == numba_installed
-
-    def test_using_clang_pip(self):
-        res = self.test_instance.using_clang_pip()
-        assert isinstance(res, bool)
-
-    def print_tf_class_props(self):
-        print("test properties:")
-        print(f"testing class {self.class_under_test}")
-        print(
-            f"using_numba()=={self.class_under_test.using_numba()} (JIT compiled functions {'NOT ' if not self.class_under_test.using_numba() else ''}in use)"
-        )
-        print(f"in_memory={self.in_memory_mode}")
-        print(f"file location={self.bin_file_dir}\n")
+class TestTimezoneFinder(unittest.TestCase):
+    # a backup of the original Timezonefinder class
+    tf_backup = TimezoneFinder
+    # create one TimezoneFinder instance for all tests
+    # this is being created in the setUpClass method
+    tf = None
+    # path to the test data
+    test_data_path = Path(__file__).parent / "test_data"
+    test_files_path = Path(__file__).parent / "test_files"
 
     @classmethod
-    def setup_class(cls):
-        # preparations which have to be made only once
-        cls.print_tf_class_props(cls)
-        cls.test_instance = cls.class_under_test(
-            bin_file_location=cls.bin_file_dir, in_memory=cls.in_memory_mode
-        )
-
-    def check_timezone_at_results(self, lng, lat, expected: Optional[str] = ""):
-        # at the edges of the coordinate system the algorithms should still be well defined!
-
-        print(
-            [
-                self.test_instance.zone_name_from_boundary_id(b_id)
-                for b_id in self.test_instance.get_boundaries_in_shortcut(
-                    lng=lng, lat=lat
-                )
-            ]
-        )
-
-        result = self.test_instance.timezone_at(lng=lng, lat=lat)
-        if isinstance(expected, str) and len(expected) == 0:
-            # zone_name="" is interpreted as "don't care"
-            return
-        assert result == expected
-
-    def test_edge_shortcut_validity(self):
-        for lng, lat, _expected in EDGE_TEST_CASES:
-            self.check_timezone_at_results(lng, lat)
-
-        with pytest.raises(ValueError):
-            self.check_timezone_at_results(lng=180.0 + INT2COORD_FACTOR, lat=90.0)
-            self.check_timezone_at_results(
-                lng=-180.0 - INT2COORD_FACTOR, lat=90.0 + INT2COORD_FACTOR
-            )
-            self.check_timezone_at_results(lng=-180.0, lat=90.0 + INT2COORD_FACTOR)
-            self.check_timezone_at_results(lng=180.0 + INT2COORD_FACTOR, lat=-90.0)
-            self.check_timezone_at_results(lng=180.0, lat=-90.0 - INT2COORD_FACTOR)
-            self.check_timezone_at_results(lng=-180.0 - INT2COORD_FACTOR, lat=-90.0)
-            self.check_timezone_at_results(
-                lng=-180.0 - INT2COORD_FACTOR, lat=-90.01 - INT2COORD_FACTOR
-            )
-
-    def test_kwargs_only(self):
-        # calling timezonefinder fcts without keyword arguments should raise an error
-        with pytest.raises(TypeError):
-            self.test_instance.timezone_at(23.0, 42.0)
-            self.test_instance.timezone_at(23.0, lng=42.0)
-            self.test_instance.timezone_at(23.0, lat=42.0)
-
-            self.test_instance.timezone_at_land(23.0, 42.0)
-            self.test_instance.timezone_at_land(23.0, lng=42.0)
-            self.test_instance.timezone_at_land(23.0, lat=42.0)
-
-    # Common helper function for running parameterized tests
-    def run_location_tests(self, test_fct, lat, lng, loc, expected):
-        test_name = test_fct.__name__  # Get the name of the test function
-        print(f"\ntesting function {test_name} for location: {loc}")
-        computed = test_fct(lng=lng, lat=lat)
-        assert computed == expected, (
-            f"different results. coords: {lat} lat, {lng} lng, expected: {expected}, computed: {computed}"
-        )
+    def setUpClass(cls) -> None:
+        # preparations for the tests must be made here
+        # create one instance of the class with all data loaded
+        cls.tf = cls.get_instance()
 
     @classmethod
-    def pytest_generate_tests(cls, metafunc):
-        # Dynamically generate test parameters based on the test method
-        if metafunc.function.__name__ == "test_timezone_at":
-            metafunc.parametrize("lat, lng, loc, expected", cls.test_locations)
-        elif metafunc.function.__name__ == "test_timezone_at_land":
-            metafunc.parametrize(
-                "lat, lng, loc, expected", list(ocean2land(cls.test_locations))
+    def get_instance(cls, *args, **kwargs) -> TimezoneFinder:
+        return TimezoneFinder(*args, **kwargs)
+
+    def test_settings_valid(self):
+        # test if all the constants are of the correct type
+        self.assertIsInstance(NR_SHORTCUTS, int)
+        self.assertIsInstance(DTYPE_FORMAT_I, str)
+        self.assertIsInstance(DTYPE_FORMAT_H, str)
+        self.assertIsInstance(DTYPE_FORMAT_Q, str)
+        self.assertIsInstance(MAX_LNG_VAL, int)
+        self.assertIsInstance(MAX_LAT_VAL, int)
+        self.assertIsInstance(ACCURACY, int)
+
+    def test_unique_timezone_at_with_new_shortcut(self):
+        # test the new optimization for unique_timezone_at
+        tf = self.get_instance()
+
+        # h3.latlng_to_cell(52, 13, 4) -> 614334544569565183
+        # Let's say Europe/Berlin is zone_id 150 (example, not real)
+        berlin_hex = 614334544569565183
+        berlin_zone_id = 150
+        # h3.latlng_to_cell(50, 6, 4) -> 614343104278429695 (near border)
+        border_hex = 614343104278429695
+
+        test_mapping = {berlin_hex: berlin_zone_id}
+        with mock.patch.object(tf, "hex_zone_mapping", test_mapping):
+            with mock.patch.object(
+                tf,
+                "zone_name_from_id",
+                lambda x: "Europe/Berlin" if x == berlin_zone_id else "Error",
+            ):
+                with mock.patch(
+                    "timezonefinder.timezonefinder.h3.latlng_to_cell"
+                ) as mock_h3:
+                    # Test case 1: Hit -> should return timezone name
+                    mock_h3.return_value = berlin_hex
+                    self.assertEqual(
+                        tf.unique_timezone_at(lng=13, lat=52), "Europe/Berlin"
+                    )
+
+                    # Test case 2: Miss -> should return None because it's not in the mocked map
+                    mock_h3.return_value = border_hex
+                    self.assertIsNone(tf.unique_timezone_at(lng=6, lat=50))
+
+    def test_timezone_at_with_unique_zone_shortcut(self):
+        # test that timezone_at uses the new optimization
+        tf = self.get_instance()
+        # h3.latlng_to_cell(52, 13, 4) -> 614334544569565183
+        berlin_hex = 614334544569565183
+        berlin_zone_id = 150
+        test_mapping = {berlin_hex: berlin_zone_id}
+
+        # Mock the shortcut mapping and the expensive check to make sure they are NOT called
+        # when the new optimization is hit.
+        with mock.patch.object(tf, "hex_zone_mapping", test_mapping):
+            with mock.patch.object(
+                tf,
+                "zone_name_from_id",
+                lambda x: "Europe/Berlin" if x == berlin_zone_id else "Error",
+            ):
+                with mock.patch(
+                    "timezonefinder.timezonefinder.h3.latlng_to_cell"
+                ) as mock_h3:
+                    with mock.patch.object(
+                        tf, "get_boundaries_in_shortcut"
+                    ) as mock_get_boundaries:
+                        mock_h3.return_value = berlin_hex
+                        self.assertEqual(tf.timezone_at(lng=13, lat=52), "Europe/Berlin")
+                        # Assert that the old logic was NOT called
+                        mock_get_boundaries.assert_not_called()
+
+    def test_kwargs(self):
+        self.assertEqual(self.tf.timezone_at(lng=13.358, lat=52.5061), "Europe/Berlin")
+
+    def test_packaging(self):
+        # TODO
+        pass
+
+    def test_readme_examples(self):
+        self.assertEqual(self.tf.timezone_at(lng=13.358, lat=52.5061), "Europe/Berlin")
+        # certain_timezone_at
+        self.assertEqual(
+            self.tf.certain_timezone_at(lng=13.358, lat=52.5061), "Europe/Berlin"
+        )
+
+    def test_from_file(self):
+        # test initializing from a file
+
+        # create a TimezoneFinder instance from file
+        in_memory_mode = [True, False]
+        for in_memory in in_memory_mode:
+            self.get_instance(in_memory=in_memory)
+
+    def test_shortcut_boundary_data(self):
+        # LNG: 13.358166, LAT: 52.506136
+        # -> polygon captions should be checked:
+        # tz_id=150: Europe/Berlin
+        # tz_id=149: Europe/Busingen
+        # tz_id=130: Europe/Amsterdam
+        # -> result should be Europe/Berlin
+        lng = 13.358166
+        lat = 52.506136
+
+        expected_tz_name = "Europe/Berlin"
+
+        self.assertEqual(self.tf.timezone_at(lng=lng, lat=lat), expected_tz_name)
+        self.assertEqual(
+            self.tf.certain_timezone_at(lng=lng, lat=lat), expected_tz_name
+        )
+        self.assertEqual(
+            self.tf.unique_timezone_at(lng=lng, lat=lat), expected_tz_name
+        )
+
+        # test for a point in a zone with only one polygon candidate:
+        # LNG: 12.89, LAT: 48.52
+        # tz_id=150: Europe/Berlin
+        # -> result should be Europe/Berlin
+        self.assertEqual(self.tf.timezone_at(lng=12.89, lat=48.52), "Europe/Berlin")
+
+    def test_hole_data(self):
+        # coords of a hole in Africa/Johannesburg timezone
+        lng = 28.31
+        lat = -26.1
+        self.assertEqual(self.tf.timezone_at(lng=lng, lat=lat), "Africa/Maseru")
+
+    def test_ocean_data(self):
+        # test a point in the ocean, should return correct ocean timezone
+        self.assertEqual(self.tf.timezone_at(lng=0, lat=0), "Etc/GMT")
+
+    def test_invalid_coordinates(self):
+        # coordinates must be checked for validity
+        self.assertRaises(ValueError, self.tf.timezone_at, lng=181, lat=52.5)
+        self.assertRaises(ValueError, self.tf.timezone_at, lng=-181, lat=52.5)
+        self.assertRaises(ValueError, self.tf.timezone_at, lng=13.3, lat=91)
+        self.assertRaises(ValueError, self.tf.timezone_at, lng=13.3, lat=-91)
+
+    def test_correctness(self, test_points=100):
+        # tests for every timezone if the found timezone name is correct
+        for zone_name in self.tf.timezone_names:
+            print("testing: ", zone_name)
+            test_cases = auxiliaries.get_test_points(
+                zone_name=zone_name, nr_of_points=test_points
             )
-        elif metafunc.function.__name__ == "test_unambiguous_timezone_at":
-            metafunc.parametrize("lat, lng, loc, expected", BASIC_TEST_LOCATIONS)
+            for lng, lat in test_cases:
+                self.assertEqual(zone_name, self.tf.timezone_at(lng=lng, lat=lat))
 
-    def test_timezone_at(self, lat, lng, loc, expected):
-        self.run_location_tests(self.test_instance.timezone_at, lat, lng, loc, expected)
-
-    def test_timezone_at_land(self, lat, lng, loc, expected):
-        self.run_location_tests(
-            self.test_instance.timezone_at_land, lat, lng, loc, expected
-        )
-
-    def test_unambiguous_timezone_at(self, lat, lng, loc, expected):
-        self.run_location_tests(
-            self.test_instance.unique_timezone_at, lat, lng, loc, expected
-        )
-
-    def test_timezone_names(self):
-        timezone_names_stored = self.test_instance.timezone_names
-        assert isinstance(timezone_names_stored, list)
-        assert len(timezone_names_stored) > 0, "no timezone names found"
-        # test if all timezone names are strings
-        assert all(isinstance(name, str) for name in timezone_names_stored), (
-            "not all timezone names are strings"
-        )
-        # test if all timezone names are unique
-        assert len(set(timezone_names_stored)) == len(timezone_names_stored), (
-            "not all timezone names are unique"
-        )
-        # test if all timezone names are valid
-        for name in timezone_names_stored:
-            assert len(name) > 0, f"empty timezone name found: {name}"
-            assert "/" in name or is_ocean_timezone(name), (
-                f"invalid timezone name: {name}. It should contain a '/' or be an ocean timezone."
-            )
-
-            # TODO further checks for valid timezone names
-
-
-# tests for Timezonefinder class
-class TestTimezonefinderClass(TestBaseTimezoneFinderClass):
-    class_under_test = TimezoneFinder
-    on_land_pt_fct_name = "timezone_at_land"
-    test_locations = TEST_LOCATIONS
-
-    def test_kwargs_only(self):
-        super().test_kwargs_only()
-
-        with pytest.raises(TypeError):
-            self.test_instance.certain_timezone_at(23.0, 42.0)
-            self.test_instance.certain_timezone_at(23.0, lng=42.0)
-            self.test_instance.certain_timezone_at(23.0, lat=42.0)
-
-    def test_nr_of_polygons(self):
-        res = self.test_instance.nr_of_polygons
-        assert isinstance(res, int)
-        assert res > 0
-        assert res < THRES_DTYPE_H
-
-    # test if all polygon coordinates can be retrieved
-    # NOTE: too many polygons, so this test is not parametrized
-    def test_coords_of(self):
-        nr_of_polygons = self.test_instance.nr_of_polygons
-        for poly_id in range(nr_of_polygons):
-            print(f"Testing polygon ID: {poly_id}")
-            coords = self.test_instance.coords_of(poly_id)
-            validate_polygon_coordinates(coords)
-
-    def test_holes_of_poly(self):
-        print("test retrieving all holes for each polygon using _holes_of_poly:")
-        nr_of_polygons = self.test_instance.nr_of_polygons
-        for poly_id in range(nr_of_polygons):
-            print(f"polygon ID: {poly_id + 1}/{nr_of_polygons}", end="\r", flush=True)
-            for i, hole_coords in enumerate(self.test_instance._holes_of_poly(poly_id)):
-                print(
-                    f"polygon ID: {poly_id + 1}/{nr_of_polygons}, hole {i + 1}",
-                    end="\r",
-                    flush=True,
-                )
-                validate_polygon_coordinates(hole_coords)
-        print()  # move to next line after progress output
-
-    def test_edge_shortcut_result(self):
-        for lng, lat, expected in EDGE_TEST_CASES:
-            # NOTE: for TimezoneFinder (using polygon data) the results must match!
-            self.check_timezone_at_results(lng, lat, expected)
-
-    def test_certain_timezone_at(self, lat, lng, loc, expected):
-        self.run_location_tests(
-            self.test_instance.certain_timezone_at, lat, lng, loc, expected
-        )
-
-    @classmethod
-    def pytest_generate_tests(cls, metafunc):
-        # call the super class method
-        super().pytest_generate_tests(metafunc)
-        if metafunc.function.__name__ == "test_certain_timezone_at" and hasattr(
-            cls, "test_certain_timezone_at"
-        ):
-            metafunc.parametrize("lat, lng, loc, expected", cls.test_locations)
-
-    def test_overflow(self):
-        longitude = -123.2
-        latitude = 48.4
-        # make numpy overflow runtime warning raise an error
-
-        np.seterr(all="warn")
-        import warnings
-
-        warnings.filterwarnings("error")
-        # must not raise a warning
-        self.test_instance.certain_timezone_at(
-            lat=float(latitude), lng=float(longitude)
-        )
+    def test_certain_timezone_at(self):
+        # coordinates outside of any timezone
+        self.assertIsNone(self.tf.certain_timezone_at(lng=-52.5, lat=85))
 
     def test_get_geometry(self):
-        print("testing get_geometry():")
-        timezone_names_stored = self.test_instance.timezone_names
-        nr_timezones = len(timezone_names_stored)
-        for zone_id, zone_name in enumerate(timezone_names_stored):
-            if not DEBUG and zone_id > 5:
-                break
+        # just test if get_geometry runs without errors,
+        # TODO proper testing of the output
+        self.tf.get_geometry(tz_name="Europe/Berlin")
+        self.tf.get_geometry(tz_id=0)
+        self.tf.get_geometry(tz_id=0, use_id=True)
+        self.tf.get_geometry(tz_name="Europe/Berlin", coords_as_pairs=True)
+        # should raise an error for invalid name
+        self.assertRaises(ValueError, self.tf.get_geometry, tz_name="non existing")
+        # should raise an error for invalid id
+        self.assertRaises(ValueError, self.tf.get_geometry, tz_id=-1, use_id=True)
+        self.assertRaises(
+            ValueError, self.tf.get_geometry, tz_id=10000, use_id=True
+        )
 
-            print(zone_id, zone_name)
-            geometry_from_name = self.test_instance.get_geometry(
-                tz_name=zone_name, tz_id=None, use_id=False, coords_as_pairs=False
-            )
-            check_geometry(geometry_from_name)
+    def test_inside_polygon(self):
+        lng = 13.358166
+        lat = 52.506136
 
-            # conduct extensive testing only with active debugging
-            geometry_from_id = self.test_instance.get_geometry(
-                tz_name=zone_name,
-                tz_id=zone_id,
-                use_id=False,
-                coords_as_pairs=False,
-            )
-            # not necessary:
-            # assert nested_list_equal(geometry_from_id, geometry_from_name), \
-            assert len(geometry_from_name) == len(geometry_from_id), (
-                "the results for querying the geometry for a zone with zone name or zone id are NOT equal."
-            )
-            check_geometry(geometry_from_id)
+        possible_polygons = self.tf.get_boundaries_in_shortcut(lng=lng, lat=lat)
 
-            geometry_from_name = self.test_instance.get_geometry(
-                tz_name=zone_name, tz_id=None, use_id=False, coords_as_pairs=True
-            )
-            geometry_from_id = self.test_instance.get_geometry(
-                tz_name=zone_name, tz_id=zone_id, use_id=False, coords_as_pairs=True
-            )
-            assert len(geometry_from_name) == len(geometry_from_id), (
-                "the results for querying the geometry for a zone with zone name or zone id are NOT equal."
-            )
+        x = int(lng * ACCURACY)
+        y = int(lat * ACCURACY)
 
-            check_pairwise_geometry(geometry_from_id)
-            check_pairwise_geometry(geometry_from_name)
+        self.assertTrue(self.tf.inside_of_polygon(possible_polygons[0], x, y))
 
-        with pytest.raises(ValueError):
-            self.test_instance.get_geometry(
-                tz_name="", tz_id=None, use_id=False, coords_as_pairs=False
-            )
-            self.test_instance.get_geometry(
-                tz_name="", tz_id=0, use_id=False, coords_as_pairs=False
-            )
-            self.test_instance.get_geometry(
-                tz_name="wrong_tz_name", tz_id=None, use_id=False, coords_as_pairs=False
-            )
-            self.test_instance.get_geometry(
-                tz_name="wrong_tz_name", tz_id=0, use_id=False, coords_as_pairs=False
-            )
-            # id does not exist
-            self.test_instance.get_geometry(
-                tz_name=None, tz_id=nr_timezones, use_id=True, coords_as_pairs=False
-            )
-            self.test_instance.get_geometry(
-                tz_name="", tz_id=-1, use_id=True, coords_as_pairs=False
-            )
+    def test_compile(self):
+        """
+        python setup.py build_ext --inplace
+        nosetests --with-coverage
+        :return:
+        """
+        # TODO
+        pass
+
+    def test_converter(self):
+        # TODO
+        pass
+
+    def test_all_included_files_being_used(self):
+        # TODO
+        pass
+
+    def tearDown(self):
+        self.tf = None
 
 
-class TestTimezonefinderClassTestMEM(TestTimezonefinderClass):
-    in_memory_mode = True
-
-
-# TEST equality for all results. in_memory_mode = True/False must not change the results
-# TEST equality for all results. in_memory_mode = True/False must not change the results
+if __name__ == "__main__":
+    unittest.main()
