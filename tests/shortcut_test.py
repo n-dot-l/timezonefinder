@@ -16,11 +16,23 @@ from timezonefinder.flatbuf.shortcut_utils import (
     get_shortcut_file_path,
     read_shortcuts_binary,
 )
+from timezonefinder.flatbuf.unique_shortcut_utils import (
+    get_unique_shortcut_file_path,
+    read_unique_shortcuts_binary,
+)
 from timezonefinder.timezonefinder import TimezoneFinder
 from timezonefinder.utils_numba import int2coord
 
 shortcut_file_path = get_shortcut_file_path()
 shortcuts = read_shortcuts_binary(shortcut_file_path)
+
+try:
+    unique_shortcut_file_path = get_unique_shortcut_file_path()
+    unique_shortcuts = read_unique_shortcuts_binary(unique_shortcut_file_path)
+except FileNotFoundError:
+    # Handle case where file might not exist during certain test setups
+    unique_shortcuts = {}
+
 
 VERBOSE_TESTING = True
 
@@ -37,10 +49,13 @@ def tf():
 def test_shortcut_completeness(tf):
     """Test that all points of each polygon are included in the proper shortcuts."""
     # Get access to the timezone polygons
-    polygons = [tf.boundaries.coords_of(i) for i in range(tf.nr_of_polygons)]
-
     errors = []
-    for poly_id, poly in enumerate(polygons):
+    for poly_id in range(tf.nr_of_polygons):
+        poly = tf.boundaries.coords_of(poly_id)
+        if poly.shape[1] == 0:
+            # this polygon's geometry has been deleted, skip checks
+            continue
+
         if VERBOSE_TESTING and poly_id % 100 == 0:
             print(f"\rvalidating polygon {poly_id}", end="", flush=True)
 
@@ -94,7 +109,7 @@ def test_unused_polygons(tf):
     unused_poly_ids = all_polygon_ids - used_polygons
 
     assert len(unused_poly_ids) == 0, (
-        f"There are {len(unused_poly_ids)} unused polygons: {unused_poly_ids}"
+        f"There are {len(unused_poly_ids)} unused polygons: {list(unused_poly_ids)[:5]}"
     )
 
 
@@ -168,3 +183,55 @@ def test_shortcut_sorting(tf):
             invalid_sortings.append(f"Invalid sorting for hexagon {hex_id}: {str(e)}")
 
     assert not invalid_sortings, f"Shortcut sorting errors: {invalid_sortings[:5]}"
+
+
+def test_unique_shortcuts_correctness(tf):
+    """
+    Test that every unique shortcut points to a zone that is the only zone in the corresponding main shortcut.
+    """
+    if not unique_shortcuts:
+        pytest.skip("No unique shortcuts file found to test.")
+
+    errors = []
+    for hex_id, unique_zone_id in unique_shortcuts.items():
+        try:
+            poly_ids_in_shortcut = shortcuts[hex_id]
+        except KeyError:
+            errors.append(
+                f"Hexagon {hex_id} from unique shortcuts not found in main shortcuts."
+            )
+            continue
+
+        if not poly_ids_in_shortcut.size > 0:
+            errors.append(
+                f"Hexagon {hex_id} from unique shortcuts is empty in main shortcuts."
+            )
+            continue
+
+        zone_ids = np.unique(tf.zone_ids_of(poly_ids_in_shortcut))
+        if len(zone_ids) > 1:
+            errors.append(
+                f"Hexagon {hex_id} in unique shortcuts should only have one zone, but has {len(zone_ids)}: {zone_ids}."
+            )
+        elif zone_ids[0] != unique_zone_id:
+            errors.append(
+                f"Hexagon {hex_id} has mismatched zone id. Unique shortcut has {unique_zone_id}, main shortcut has {zone_ids[0]}."
+            )
+
+    assert not errors, f"Unique shortcut correctness errors: {errors[:5]}"
+
+
+def test_unique_shortcut_resolution():
+    """Test that all unique shortcuts have the correct H3 resolution."""
+    if not unique_shortcuts:
+        pytest.skip("No unique shortcuts file found to test.")
+
+    invalid_resolutions = []
+    for hex_id in unique_shortcuts.keys():
+        res = h3.get_resolution(hex_id)
+        if res != SHORTCUT_H3_RES:
+            invalid_resolutions.append(
+                f"Hexagon {hex_id} has resolution {res}, expected {SHORTCUT_H3_RES}"
+            )
+
+    assert not invalid_resolutions, f"Resolution errors: {invalid_resolutions[:5]}"
