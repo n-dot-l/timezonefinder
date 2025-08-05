@@ -1,3 +1,4 @@
+```python
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -48,9 +49,9 @@ class TestTimezoneFinder(unittest.TestCase):
         test_mapping = {berlin_hex: berlin_zone_id}
         with mock.patch.object(tf, "hex_zone_mapping", test_mapping):
             with mock.patch.object(
-                tf,
+                TimezoneFinder,
                 "zone_name_from_id",
-                lambda x: "Europe/Berlin" if x == berlin_zone_id else "Error",
+                lambda slf, x: "Europe/Berlin" if x == berlin_zone_id else "Error",
             ):
                 with mock.patch(
                     "timezonefinder.timezonefinder.h3.latlng_to_cell"
@@ -77,15 +78,15 @@ class TestTimezoneFinder(unittest.TestCase):
         # when the new optimization is hit.
         with mock.patch.object(tf, "hex_zone_mapping", test_mapping):
             with mock.patch.object(
-                tf,
+                TimezoneFinder,
                 "zone_name_from_id",
-                lambda x: "Europe/Berlin" if x == berlin_zone_id else "Error",
+                lambda slf, x: "Europe/Berlin" if x == berlin_zone_id else "Error",
             ):
                 with mock.patch(
                     "timezonefinder.timezonefinder.h3.latlng_to_cell"
                 ) as mock_h3:
                     with mock.patch.object(
-                        tf, "get_boundaries_in_shortcut"
+                        TimezoneFinder, "get_boundaries_in_shortcut"
                     ) as mock_get_boundaries:
                         mock_h3.return_value = berlin_hex
                         self.assertEqual(tf.timezone_at(lng=13, lat=52), "Europe/Berlin")
