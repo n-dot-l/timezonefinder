@@ -238,31 +238,37 @@ def parse_polygons_from_json(input_path: Path) -> None:
 
 
 def compute_zone_positions() -> List[int]:
-    poly_nr2zone_id = []
+    """
+    Computes the start index of polygons for each zone.
+    The polygons are assumed to be sorted by zone_id.
+    This function is robust against zones that have no polygons.
+    """
     print("Computing where zones start and end...")
-    last_id = -1
-    zone_id = 0
-    poly_nr = 0
-    for poly_nr, zone_id in enumerate(poly_zone_ids):
-        if zone_id != last_id:
-            poly_nr2zone_id.append(poly_nr)
-            assert zone_id >= last_id
-            last_id = zone_id
-    assert nr_of_polygons == len(poly_zone_ids)
+    # +1 for the end index of the last zone
+    zone_positions = [0] * (nr_of_zones + 1)
 
-    # TODO
-    # assert (
-    #         zone_id == nr_of_zones - 1
-    # ), f"not pointing to the last zone with id {nr_of_zones - 1}"
-    # assert (
-    #         poly_nr == nr_of_polygons - 1
-    # ), f"not pointing to the last polygon with id {nr_of_polygons - 1}"
-    # ATTENTION: add one more entry for knowing where the last zone ends!
-    # ATTENTION: the last entry is one higher than the last polygon id (to be consistant with the
-    poly_nr2zone_id.append(nr_of_polygons)
-    # assert len(poly_nr2zone_id) == nr_of_zones + 1
+    if not poly_zone_ids:
+        # No polygons left at all.
+        print("...Done (no polygons).\n")
+        return zone_positions
+
+    last_processed_zone = -1
+    for poly_id, zone_id in enumerate(poly_zone_ids):
+        if zone_id > last_processed_zone:
+            # Fill in for any zones that were skipped (had no polygons)
+            for missing_zone_id in range(last_processed_zone + 1, zone_id):
+                zone_positions[missing_zone_id] = poly_id
+
+            zone_positions[zone_id] = poly_id
+            last_processed_zone = zone_id
+
+    # Fill in for any zones at the end that have no polygons
+    for missing_zone_id in range(last_processed_zone + 1, nr_of_zones):
+        zone_positions[missing_zone_id] = nr_of_polygons
+
+    zone_positions[nr_of_zones] = nr_of_polygons
     print("...Done.\n")
-    return poly_nr2zone_id
+    return zone_positions
 
 
 # TODO extract in own h3 utils module
