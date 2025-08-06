@@ -417,6 +417,11 @@ class TimezoneFinder(AbstractTimezoneFinder):
     ):
         """retrieves the geometry of a timezone: multiple boundary polygons with holes
 
+        .. note:: Some polygons might be excluded from the data package to reduce the size.
+            This is the case for polygons that are only used in H3 hexagon cells
+            which have a unique timezone. For these timezones,
+            this function may return an empty list or a subset of their polygons.
+
         :param tz_name: one of the names in ``timezone_names.json`` or ``self.timezone_names``
         :param tz_id: the id of the timezone (=index in ``self.timezone_names``)
         :param use_id: if ``True`` uses ``tz_id`` instead of ``tz_name``
