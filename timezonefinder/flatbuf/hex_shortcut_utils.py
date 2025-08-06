@@ -75,6 +75,7 @@ def create_hex_shortcuts(path: str, shortcuts: Dict[int, int]):
     with open(path, "wb") as fh:
         fh.write(buf)
 
+
 def write_hex_shortcuts_to_buffer(builder, sorted_shortcuts: List[Tuple[int, int]]):
     n = len(sorted_shortcuts)
     offsets = np.empty(shape=n, dtype=np.uint32)

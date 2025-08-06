@@ -4,10 +4,12 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
 np = import_numpy()
 
-class HexShortcutEntry(object):
-    __slots__ = ['_tab']
+
+class HexShortcutEntry:
+    __slots__ = ["_tab"]
 
     @classmethod
     def GetRootAs(cls, buf, offset=0):
@@ -20,6 +22,7 @@ class HexShortcutEntry(object):
     def GetRootAsHexShortcutEntry(cls, buf, offset=0):
         """This method is deprecated. Please switch to GetRootAs."""
         return cls.GetRootAs(buf, offset)
+
     # HexShortcutEntry
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
@@ -28,7 +31,9 @@ class HexShortcutEntry(object):
     def HexId(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         if o != 0:
-            return self._tab.Get(flatbuffers.number_types.Uint64Flags, o + self._tab.Pos)
+            return self._tab.Get(
+                flatbuffers.number_types.Uint64Flags, o + self._tab.Pos
+            )
         return 0
 
     # HexShortcutEntry
@@ -38,15 +43,34 @@ class HexShortcutEntry(object):
             return self._tab.Get(flatbuffers.number_types.Int16Flags, o + self._tab.Pos)
         return 0
 
-def HexShortcutEntryStart(builder): builder.StartObject(2)
+
+def HexShortcutEntryStart(builder):
+    builder.StartObject(2)
+
+
 def Start(builder):
     return HexShortcutEntryStart(builder)
-def HexShortcutEntryAddHexId(builder, hexId): builder.PrependUint64Slot(0, hexId, 0)
+
+
+def HexShortcutEntryAddHexId(builder, hexId):
+    builder.PrependUint64Slot(0, hexId, 0)
+
+
 def AddHexId(builder, hexId):
     return HexShortcutEntryAddHexId(builder, hexId)
-def HexShortcutEntryAddZoneId(builder, zoneId): builder.PrependInt16Slot(1, zoneId, 0)
+
+
+def HexShortcutEntryAddZoneId(builder, zoneId):
+    builder.PrependInt16Slot(1, zoneId, 0)
+
+
 def AddZoneId(builder, zoneId):
     return HexShortcutEntryAddZoneId(builder, zoneId)
-def HexShortcutEntryEnd(builder): return builder.EndObject()
+
+
+def HexShortcutEntryEnd(builder):
+    return builder.EndObject()
+
+
 def End(builder):
     return HexShortcutEntryEnd(builder)

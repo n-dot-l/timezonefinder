@@ -4,10 +4,12 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
 np = import_numpy()
 
-class HexShortcutCollection(object):
-    __slots__ = ['_tab']
+
+class HexShortcutCollection:
+    __slots__ = ["_tab"]
 
     @classmethod
     def GetRootAs(cls, buf, offset=0):
@@ -20,6 +22,7 @@ class HexShortcutCollection(object):
     def GetRootAsHexShortcutCollection(cls, buf, offset=0):
         """This method is deprecated. Please switch to GetRootAs."""
         return cls.GetRootAs(buf, offset)
+
     # HexShortcutCollection
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
@@ -32,6 +35,7 @@ class HexShortcutCollection(object):
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
             x = self._tab.Indirect(x)
             from timezonefinder.flatbuf.HexShortcutEntry import HexShortcutEntry
+
             obj = HexShortcutEntry()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -49,15 +53,36 @@ class HexShortcutCollection(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         return o == 0
 
-def HexShortcutCollectionStart(builder): builder.StartObject(1)
+
+def HexShortcutCollectionStart(builder):
+    builder.StartObject(1)
+
+
 def Start(builder):
     return HexShortcutCollectionStart(builder)
-def HexShortcutCollectionAddEntries(builder, entries): builder.PrependUOffsetTRelativeSlot(0, flatbuffers.number_types.UOffsetTFlags.py_type(entries), 0)
+
+
+def HexShortcutCollectionAddEntries(builder, entries):
+    builder.PrependUOffsetTRelativeSlot(
+        0, flatbuffers.number_types.UOffsetTFlags.py_type(entries), 0
+    )
+
+
 def AddEntries(builder, entries):
     return HexShortcutCollectionAddEntries(builder, entries)
-def HexShortcutCollectionStartEntriesVector(builder, numElems): return builder.StartVector(4, numElems, 4)
+
+
+def HexShortcutCollectionStartEntriesVector(builder, numElems):
+    return builder.StartVector(4, numElems, 4)
+
+
 def StartEntriesVector(builder, numElems):
     return HexShortcutCollectionStartEntriesVector(builder, numElems)
-def HexShortcutCollectionEnd(builder): return builder.EndObject()
+
+
+def HexShortcutCollectionEnd(builder):
+    return builder.EndObject()
+
+
 def End(builder):
     return HexShortcutCollectionEnd(builder)
