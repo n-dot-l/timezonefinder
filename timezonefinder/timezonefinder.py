@@ -2,9 +2,24 @@ import json
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Tuple, Union
+
 import numpy as np
 from h3.api import numpy_int as h3
 
+from timezonefinder.configs import (
+    DEFAULT_DATA_DIR,
+    SHORTCUT_H3_RES,
+    CoordLists,
+    CoordPairs,
+)
+from timezonefinder.flatbuf.hex_shortcut_utils import (
+    get_hex_shortcut_file_path,
+    read_hex_shortcuts,
+)
+from timezonefinder.flatbuf.shortcut_utils import (
+    get_shortcut_file_path,
+    read_shortcuts_binary,
+)
 from timezonefinder.np_binary_helpers import (
     get_zone_ids_path,
     get_zone_positions_path,
@@ -12,17 +27,6 @@ from timezonefinder.np_binary_helpers import (
 )
 from timezonefinder.polygon_array import PolygonArray
 from timezonefinder import utils, utils_clang
-from timezonefinder.configs import (
-    DEFAULT_DATA_DIR,
-    SHORTCUT_H3_RES,
-    CoordLists,
-    CoordPairs,
-)
-
-from timezonefinder.flatbuf.shortcut_utils import (
-    get_shortcut_file_path,
-    read_shortcuts_binary,
-)
 from timezonefinder.zone_names import read_zone_names
 
 
@@ -35,6 +39,7 @@ class AbstractTimezoneFinder(ABC):
     __slots__ = [
         "data_location",
         "shortcut_mapping",
+        "hex_shortcut_mapping",
         "in_memory",
         "_fromfile",
         "timezone_names",
@@ -69,8 +74,26 @@ class AbstractTimezoneFinder(ABC):
         path2shortcut_bin = get_shortcut_file_path(self.data_location)
         self.shortcut_mapping = read_shortcuts_binary(path2shortcut_bin)
 
+        path2hex_shortcut_bin = get_hex_shortcut_file_path(self.data_location)
+        self.hex_shortcut_mapping = read_hex_shortcuts(path2hex_shortcut_bin)
+
         zone_ids_path = get_zone_ids_path(self.data_location)
         self.zone_ids = read_per_polygon_vector(zone_ids_path)
+
+    def _get_unique_zone_id(self, hex_id: int) -> Optional[int]:
+        if self.hex_shortcut_mapping is None:
+            return None
+
+        hex_ids = self.hex_shortcut_mapping[0]
+        # binary search for hex_id
+        # NOTE: searchsorted is what is needed for sorted arrays
+        idx = np.searchsorted(hex_ids, hex_id)
+
+        if idx < len(hex_ids) and hex_ids[idx] == hex_id:
+            zone_ids = self.hex_shortcut_mapping[1]
+            # cast from np.int16 to python int
+            return int(zone_ids[idx])
+        return None
 
     @property
     def nr_of_zones(self):
@@ -468,6 +491,12 @@ class TimezoneFinder(AbstractTimezoneFinder):
         :return: the timezone name of the matched polygon, or None if no match is found.
         """
         lng, lat = utils.validate_coordinates(lng, lat)
+
+        hex_id = h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)
+        zone_id = self._get_unique_zone_id(hex_id)
+        if zone_id is not None:
+            return self.zone_name_from_id(zone_id)
+
         possible_boundaries = self.get_boundaries_in_shortcut(lng=lng, lat=lat)
         nr_possible_polygons = len(possible_boundaries)
         if nr_possible_polygons == 0:

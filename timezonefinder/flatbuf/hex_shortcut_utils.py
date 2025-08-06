@@ -1,4 +1,5 @@
-from typing import Dict, Optional, List, Tuple
+from typing import Dict, List, Optional, Tuple, Union
+from pathlib import Path
 
 import flatbuffers
 import numpy as np
@@ -12,15 +13,25 @@ from timezonefinder.flatbuf.HexShortcutEntry import (
 )
 from timezonefinder.flatbuf.HexShortcutCollection import (
     AddEntries,
-    HexShortcutCollectionStartEntriesVector,
     HexShortcutCollectionEnd,
     HexShortcutCollectionStart,
+    HexShortcutCollectionStartEntriesVector,
 )
 
 # must be the same as in the schema
 # HexShortcutEntry: ulong, short -> 8 + 2 = 10 bytes. but flatbuffers has padding and vtable. so size is not fixed.
 # with ~450k entries, we need about 5MB
 BUFFER_SIZE = 6_000_000
+HEX_SHORTCUT_FILENAME = "hex_shortcuts.fbs"
+
+
+def get_hex_shortcut_file_path(path: Union[str, Path]) -> str:
+    """
+    Constructs the full path to the hex shortcut file.
+    :param path: the path to the data directory
+    :return: the full path to the hex shortcut file
+    """
+    return str(Path(path) / HEX_SHORTCUT_FILENAME)
 
 
 def read_hex_shortcuts(path: str) -> Optional[np.ndarray]:
