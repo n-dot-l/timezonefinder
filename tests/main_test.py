@@ -265,7 +265,7 @@ class TestTimezonefinderClass(TestBaseTimezoneFinderClass):
 
             # verify that the mocked functions were called as expected
             mock_h3.assert_called_once_with(lat, lng, SHORTCUT_H3_RES)
-            mock_get_unique.assert_called_once_with(self.test_instance, test_hex_id)
+            mock_get_unique.assert_called_once_with(test_hex_id)
             # verify that the correct timezone name is returned
             assert result == test_zone_name
             # The key is that the expensive part (get_boundaries_in_shortcut and what follows) is NOT called
@@ -294,10 +294,8 @@ class TestTimezonefinderClass(TestBaseTimezoneFinderClass):
         ):
             self.test_instance.timezone_at(lng=lng, lat=lat)
 
-            mock_get_unique.assert_called_once_with(self.test_instance, test_hex_id)
-            mock_get_boundaries.assert_called_once_with(
-                self.test_instance, lng=lng, lat=lat
-            )
+            mock_get_unique.assert_called_once_with(test_hex_id)
+            mock_get_boundaries.assert_called_once_with(lng=lng, lat=lat)
 
     @classmethod
     def pytest_generate_tests(cls, metafunc):
