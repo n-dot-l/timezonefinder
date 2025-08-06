@@ -1,4 +1,3 @@
-```python
 import json
 from abc import ABC, abstractmethod
 from pathlib import Path
@@ -545,7 +544,14 @@ class TimezoneFinder(AbstractTimezoneFinder):
         :return: the timezone name of the polygon the point is included in or `None`
         """
         lng, lat = utils.validate_coordinates(lng, lat)
-        possible_boundaries = self.get_boundaries_in_shortcut(lng=lng, lat=lat)
+        hex_id = h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)
+
+        # Check for a unique zone shortcut
+        unique_zone_id = self.unique_zone_mapping.get(hex_id)
+        if unique_zone_id is not None:
+            return self.zone_name_from_id(unique_zone_id)
+
+        possible_boundaries = self.shortcut_mapping[hex_id]
         nr_possible_boundaries = len(possible_boundaries)
 
         if nr_possible_boundaries == 0:
