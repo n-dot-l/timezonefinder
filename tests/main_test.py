@@ -252,11 +252,12 @@ class TestTimezonefinderClass(TestBaseTimezoneFinderClass):
                 "timezonefinder.timezonefinder.h3.latlng_to_cell",
                 return_value=test_hex_id,
             ) as mock_h3,
-            patch.object(
-                self.test_instance, "_get_unique_zone_id", return_value=test_zone_id
+            patch(
+                "timezonefinder.timezonefinder.TimezoneFinder._get_unique_zone_id",
+                return_value=test_zone_id,
             ) as mock_get_unique,
-            patch.object(
-                self.test_instance, "get_boundaries_in_shortcut"
+            patch(
+                "timezonefinder.timezonefinder.TimezoneFinder.get_boundaries_in_shortcut"
             ) as mock_get_boundaries,
         ):
             # call the function under test
@@ -264,7 +265,7 @@ class TestTimezonefinderClass(TestBaseTimezoneFinderClass):
 
             # verify that the mocked functions were called as expected
             mock_h3.assert_called_once_with(lat, lng, SHORTCUT_H3_RES)
-            mock_get_unique.assert_called_once_with(test_hex_id)
+            mock_get_unique.assert_called_once_with(self.test_instance, test_hex_id)
             # verify that the correct timezone name is returned
             assert result == test_zone_name
             # The key is that the expensive part (get_boundaries_in_shortcut and what follows) is NOT called
@@ -282,19 +283,21 @@ class TestTimezonefinderClass(TestBaseTimezoneFinderClass):
                 "timezonefinder.timezonefinder.h3.latlng_to_cell",
                 return_value=test_hex_id,
             ),
-            patch.object(
-                self.test_instance, "_get_unique_zone_id", return_value=None
+            patch(
+                "timezonefinder.timezonefinder.TimezoneFinder._get_unique_zone_id",
+                return_value=None,
             ) as mock_get_unique,
-            patch.object(
-                self.test_instance,
-                "get_boundaries_in_shortcut",
+            patch(
+                "timezonefinder.timezonefinder.TimezoneFinder.get_boundaries_in_shortcut",
                 return_value=np.array([], dtype=int),
             ) as mock_get_boundaries,
         ):
             self.test_instance.timezone_at(lng=lng, lat=lat)
 
-            mock_get_unique.assert_called_once_with(test_hex_id)
-            mock_get_boundaries.assert_called_once_with(lng=lng, lat=lat)
+            mock_get_unique.assert_called_once_with(self.test_instance, test_hex_id)
+            mock_get_boundaries.assert_called_once_with(
+                self.test_instance, lng=lng, lat=lat
+            )
 
     @classmethod
     def pytest_generate_tests(cls, metafunc):
