@@ -1,0 +1,14 @@
+// an entry mapping an h3 hex id to a unique timezone id
+table HexShortcutEntry {
+    // h3 hex id
+    hex_id: ulong;
+    // the id of the timezone
+    zone_id: short;
+}
+
+// a collection of HexShortcutEntries for fast lookups
+table HexShortcutCollection {
+    entries: [HexShortcutEntry];
+}
+
+root_type HexShortcutCollection;
