@@ -1,0 +1,35 @@
+name: GitElf CI
+
+on:
+  push:
+    branches:
+      - 'gitelf-*'
+
+jobs:
+  test:
+    name: Lint and Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          # Use a version for which all major dependencies (like numba) are available
+          python-version: '3.12'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Install dependencies
+        # Install all dependency groups to ensure tools for linting and testing are present
+        run: uv sync --all-groups
+
+      - name: Run pre-commit checks
+        # Run linters and other checks defined in .pre-commit-config.yaml
+        run: uv run pre-commit run --all-files
+
+      - name: Run test suite
+        # Run the full test suite, including unit and integration tests
+        run: uv run pytest
