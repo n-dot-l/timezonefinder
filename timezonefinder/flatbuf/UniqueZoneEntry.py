@@ -5,10 +5,12 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
 np = import_numpy()
 
-class UniqueZoneEntry(object):
-    __slots__ = ['_tab']
+
+class UniqueZoneEntry:
+    __slots__ = ["_tab"]
 
     @classmethod
     def GetRootAs(cls, buf, offset=0):
@@ -21,6 +23,7 @@ class UniqueZoneEntry(object):
     def GetRootAsUniqueZoneEntry(cls, buf, offset=0):
         """This method is deprecated. Please switch to GetRootAs."""
         return cls.GetRootAs(buf, offset)
+
     # UniqueZoneEntry
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
@@ -29,29 +32,52 @@ class UniqueZoneEntry(object):
     def HexId(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         if o != 0:
-            return self._tab.Get(flatbuffers.number_types.Uint64Flags, o + self._tab.Pos)
+            return self._tab.Get(
+                flatbuffers.number_types.Uint64Flags, o + self._tab.Pos
+            )
         return 0
 
     # UniqueZoneEntry
     def ZoneId(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(6))
         if o != 0:
-            return self._tab.Get(flatbuffers.number_types.Uint16Flags, o + self._tab.Pos)
+            return self._tab.Get(
+                flatbuffers.number_types.Uint16Flags, o + self._tab.Pos
+            )
         return 0
 
-def Start(builder): builder.StartObject(2)
+
+def Start(builder):
+    builder.StartObject(2)
+
+
 def UniqueZoneEntryStart(builder):
     """This method is deprecated. Please switch to Start."""
     return Start(builder)
-def AddHexId(builder, hexId): builder.PrependUint64Slot(0, hexId, 0)
+
+
+def AddHexId(builder, hexId):
+    builder.PrependUint64Slot(0, hexId, 0)
+
+
 def UniqueZoneEntryAddHexId(builder, hexId):
     """This method is deprecated. Please switch to AddHexId."""
     return AddHexId(builder, hexId)
-def AddZoneId(builder, zoneId): builder.PrependUint16Slot(1, zoneId, 0)
+
+
+def AddZoneId(builder, zoneId):
+    builder.PrependUint16Slot(1, zoneId, 0)
+
+
 def UniqueZoneEntryAddZoneId(builder, zoneId):
     """This method is deprecated. Please switch to AddZoneId."""
     return AddZoneId(builder, zoneId)
-def End(builder): return builder.EndObject()
+
+
+def End(builder):
+    return builder.EndObject()
+
+
 def UniqueZoneEntryEnd(builder):
     """This method is deprecated. Please switch to End."""
     return End(builder)
