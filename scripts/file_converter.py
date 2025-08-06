@@ -748,9 +748,8 @@ def parse_data(
 
     compile_data_files(output_path)
     shortcuts = compile_shortcut_mapping()
-    output_file = get_shortcut_file_path(output_path)
-    write_shortcuts_flatbuffers(shortcuts, output_file)
 
+    # create a mapping from h3 cell to a unique zone if all polygons in this cell belong to the same zone
     print("creating unique zone mapping...")
     unique_zone_mapping = {}
     for hex_id, poly_ids in shortcuts.items():
@@ -762,8 +761,20 @@ def parse_data(
             (unique_zone_id,) = zone_ids
             unique_zone_mapping[hex_id] = int(unique_zone_id)
 
+    # write the unique zone mapping to a separate file
     unique_zones_output_file = get_unique_zone_file_path(output_path)
     write_unique_zones_flatbuffers(unique_zone_mapping, unique_zones_output_file)
+
+    # to save space in the shortcut file, remove all polygon references from cells with a unique zone
+    # these polygons will never be checked with a point-in-polygon test anyway
+    print("clearing polygon lists in shortcuts for unique zones...")
+    for hex_id in unique_zone_mapping:
+        # a hex_id from the unique_zone_mapping should always be present in the shortcuts
+        shortcuts[hex_id] = []
+
+    # write the shortcut mapping to a file
+    output_file = get_shortcut_file_path(output_path)
+    write_shortcuts_flatbuffers(shortcuts, output_file)
 
     print(f"\n\nfinished parsing timezonefinder data to {output_path}")
 
