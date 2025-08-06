@@ -1,5 +1,6 @@
 from importlib.util import find_spec
 from typing import Optional
+from unittest.mock import patch
 
 import numpy as np
 import pytest
@@ -14,6 +15,7 @@ from tests.auxiliaries import (
 from tests.locations import BASIC_TEST_LOCATIONS, EDGE_TEST_CASES, TEST_LOCATIONS
 from timezonefinder.configs import (
     INT2COORD_FACTOR,
+    SHORTCUT_H3_RES,
 )
 from timezonefinder.polygon_array import PolygonArray
 from timezonefinder.timezonefinder import (
@@ -232,6 +234,50 @@ class TestTimezonefinderClass(TestBaseTimezoneFinderClass):
             self.test_instance.certain_timezone_at, lat, lng, loc, expected
         )
 
+    def test_hex_shortcut_usage(self):
+        """
+        Test that the hex shortcut is used and the expensive PIP checks are avoided.
+        """
+        # some random coordinates
+        lng, lat = 13.40, 52.52
+        test_hex_id = 12345
+
+        # The 42nd zone is "Africa/Douala"
+        test_zone_id = 42
+        test_zone_name = self.test_instance.zone_name_from_id(test_zone_id)
+
+        # Patch the functions that are called before the logic we want to test
+        with patch('timezonefinder.timezonefinder.h3.latlng_to_cell', return_value=test_hex_id) as mock_h3, \
+             patch.object(self.test_instance, '_get_unique_zone_id', return_value=test_zone_id) as mock_get_unique, \
+             patch.object(self.test_instance, 'get_boundaries_in_shortcut') as mock_get_boundaries:
+
+            # call the function under test
+            result = self.test_instance.timezone_at(lng=lng, lat=lat)
+
+            # verify that the mocked functions were called as expected
+            mock_h3.assert_called_once_with(lat, lng, SHORTCUT_H3_RES)
+            mock_get_unique.assert_called_once_with(test_hex_id)
+            # verify that the correct timezone name is returned
+            assert result == test_zone_name
+            # The key is that the expensive part (get_boundaries_in_shortcut and what follows) is NOT called
+            mock_get_boundaries.assert_not_called()
+
+    def test_hex_shortcut_miss(self):
+        """
+        Test that the normal logic is executed when there is no hex shortcut.
+        """
+        lng, lat = 13.40, 52.52
+        test_hex_id = 12345
+
+        with patch('timezonefinder.timezonefinder.h3.latlng_to_cell', return_value=test_hex_id), \
+             patch.object(self.test_instance, '_get_unique_zone_id', return_value=None) as mock_get_unique, \
+             patch.object(self.test_instance, 'get_boundaries_in_shortcut', return_value=np.array([], dtype=int)) as mock_get_boundaries:
+
+            self.test_instance.timezone_at(lng=lng, lat=lat)
+
+            mock_get_unique.assert_called_once_with(test_hex_id)
+            mock_get_boundaries.assert_called_once_with(lng=lng, lat=lat)
+
     @classmethod
     def pytest_generate_tests(cls, metafunc):
         # call the super class method
@@ -323,4 +369,4 @@ class TestTimezonefinderClassTestMEM(TestTimezonefinderClass):
 
 
 # TEST equality for all results. in_memory_mode = True/False must not change the results
-# TEST equality for all results. in_memory_mode = True/False must not change the results
+# TEST equality for all results. in_emory_mode = True/False must not change the results
