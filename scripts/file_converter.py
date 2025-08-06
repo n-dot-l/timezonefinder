@@ -740,6 +740,9 @@ def parse_data(
     input_path: Union[Path, str] = DEFAULT_INPUT_PATH,
     output_path: Union[Path, str] = DEFAULT_DATA_DIR,
 ):
+    global polygons, polygon_lengths, poly_zone_ids, poly_boundaries, nr_of_polygons, \
+        polynrs_of_holes, holes, all_hole_lengths, nr_of_holes
+
     input_path = Path(input_path)
     output_path = Path(output_path)
     output_path.mkdir(parents=True, exist_ok=True)
@@ -781,9 +784,6 @@ def parse_data(
                 new_id_counter += 1
 
         # Now, filter and remap all the global data structures
-        global polygons, polygon_lengths, poly_zone_ids, poly_boundaries, nr_of_polygons, \
-            polynrs_of_holes, holes, all_hole_lengths, nr_of_holes
-
         polygons = [p for i, p in enumerate(polygons) if i not in polys_to_delete]
         polygon_lengths = [l for i, l in enumerate(polygon_lengths) if i not in polys_to_delete]
         poly_zone_ids = [zid for i, zid in enumerate(poly_zone_ids) if i not in polys_to_delete]
