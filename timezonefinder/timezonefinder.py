@@ -174,7 +174,12 @@ class AbstractTimezoneFinder(ABC):
         :param lat: The latitude of the point in degrees (90.0 to -90.0).
         :return: The most common zone ID or None if no polygons exist in the shortcut.
         """
-        polys = self.get_boundaries_in_shortcut(lng=lng, lat=lat)
+        hex_id = h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)
+        unique_id = self.unique_zone_mapping.get(hex_id)
+        if unique_id is not None:
+            return unique_id
+
+        polys = self.shortcut_mapping[hex_id]
         if len(polys) == 0:
             return None
         # Note: boundary polygons are sorted from small to big in the shortcuts (grouped by zone)
