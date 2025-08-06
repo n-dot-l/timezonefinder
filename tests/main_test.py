@@ -247,10 +247,18 @@ class TestTimezonefinderClass(TestBaseTimezoneFinderClass):
         test_zone_name = self.test_instance.zone_name_from_id(test_zone_id)
 
         # Patch the functions that are called before the logic we want to test
-        with patch('timezonefinder.timezonefinder.h3.latlng_to_cell', return_value=test_hex_id) as mock_h3, \
-             patch.object(self.test_instance, '_get_unique_zone_id', return_value=test_zone_id) as mock_get_unique, \
-             patch.object(self.test_instance, 'get_boundaries_in_shortcut') as mock_get_boundaries:
-
+        with (
+            patch(
+                "timezonefinder.timezonefinder.h3.latlng_to_cell",
+                return_value=test_hex_id,
+            ) as mock_h3,
+            patch.object(
+                self.test_instance, "_get_unique_zone_id", return_value=test_zone_id
+            ) as mock_get_unique,
+            patch.object(
+                self.test_instance, "get_boundaries_in_shortcut"
+            ) as mock_get_boundaries,
+        ):
             # call the function under test
             result = self.test_instance.timezone_at(lng=lng, lat=lat)
 
@@ -269,10 +277,20 @@ class TestTimezonefinderClass(TestBaseTimezoneFinderClass):
         lng, lat = 13.40, 52.52
         test_hex_id = 12345
 
-        with patch('timezonefinder.timezonefinder.h3.latlng_to_cell', return_value=test_hex_id), \
-             patch.object(self.test_instance, '_get_unique_zone_id', return_value=None) as mock_get_unique, \
-             patch.object(self.test_instance, 'get_boundaries_in_shortcut', return_value=np.array([], dtype=int)) as mock_get_boundaries:
-
+        with (
+            patch(
+                "timezonefinder.timezonefinder.h3.latlng_to_cell",
+                return_value=test_hex_id,
+            ),
+            patch.object(
+                self.test_instance, "_get_unique_zone_id", return_value=None
+            ) as mock_get_unique,
+            patch.object(
+                self.test_instance,
+                "get_boundaries_in_shortcut",
+                return_value=np.array([], dtype=int),
+            ) as mock_get_boundaries,
+        ):
             self.test_instance.timezone_at(lng=lng, lat=lat)
 
             mock_get_unique.assert_called_once_with(test_hex_id)
