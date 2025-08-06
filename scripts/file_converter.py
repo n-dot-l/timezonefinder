@@ -748,8 +748,6 @@ def parse_data(
 
     compile_data_files(output_path)
     shortcuts = compile_shortcut_mapping()
-    output_file = get_shortcut_file_path(output_path)
-    write_shortcuts_flatbuffers(shortcuts, output_file)
 
     print("\n\ncomputing hex shortcuts for unique zones...")
     hex_shortcuts = {}
@@ -765,6 +763,14 @@ def parse_data(
     print(f"found {len(hex_shortcuts)} hex cells with unique timezones.")
     hex_shortcut_file = get_hex_shortcut_file_path(output_path)
     create_hex_shortcuts(hex_shortcut_file, hex_shortcuts)
+
+    print("clearing polygon lists in shortcuts for unique zones to save space...")
+    for hex_id in hex_shortcuts:
+        # these polygons are never checked, because the hex-shortcut is used instead
+        shortcuts[hex_id] = []
+
+    output_file = get_shortcut_file_path(output_path)
+    write_shortcuts_flatbuffers(shortcuts, output_file)
 
     print(f"\n\nfinished parsing timezonefinder data to {output_path}")
 
