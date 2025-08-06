@@ -84,6 +84,10 @@ from timezonefinder.flatbuf.shortcut_utils import (
     get_shortcut_file_path,
     write_shortcuts_flatbuffers,
 )
+from timezonefinder.flatbuf.unique_zone_utils import (
+    get_unique_zone_file_path,
+    write_unique_zones_flatbuffers,
+)
 from timezonefinder.configs import DEFAULT_DATA_DIR, SHORTCUT_H3_RES
 from timezonefinder.np_binary_helpers import (
     get_xmax_path,
@@ -234,31 +238,37 @@ def parse_polygons_from_json(input_path: Path) -> None:
 
 
 def compute_zone_positions() -> List[int]:
-    poly_nr2zone_id = []
+    """
+    Computes the start index of polygons for each zone.
+    The polygons are assumed to be sorted by zone_id.
+    This function is robust against zones that have no polygons.
+    """
     print("Computing where zones start and end...")
-    last_id = -1
-    zone_id = 0
-    poly_nr = 0
-    for poly_nr, zone_id in enumerate(poly_zone_ids):
-        if zone_id != last_id:
-            poly_nr2zone_id.append(poly_nr)
-            assert zone_id >= last_id
-            last_id = zone_id
-    assert nr_of_polygons == len(poly_zone_ids)
+    # +1 for the end index of the last zone
+    zone_positions = [0] * (nr_of_zones + 1)
 
-    # TODO
-    # assert (
-    #         zone_id == nr_of_zones - 1
-    # ), f"not pointing to the last zone with id {nr_of_zones - 1}"
-    # assert (
-    #         poly_nr == nr_of_polygons - 1
-    # ), f"not pointing to the last polygon with id {nr_of_polygons - 1}"
-    # ATTENTION: add one more entry for knowing where the last zone ends!
-    # ATTENTION: the last entry is one higher than the last polygon id (to be consistant with the
-    poly_nr2zone_id.append(nr_of_polygons)
-    # assert len(poly_nr2zone_id) == nr_of_zones + 1
+    if not poly_zone_ids:
+        # No polygons left at all.
+        print("...Done (no polygons).\n")
+        return zone_positions
+
+    last_processed_zone = -1
+    for poly_id, zone_id in enumerate(poly_zone_ids):
+        if zone_id > last_processed_zone:
+            # Fill in for any zones that were skipped (had no polygons)
+            for missing_zone_id in range(last_processed_zone + 1, zone_id):
+                zone_positions[missing_zone_id] = poly_id
+
+            zone_positions[zone_id] = poly_id
+            last_processed_zone = zone_id
+
+    # Fill in for any zones at the end that have no polygons
+    for missing_zone_id in range(last_processed_zone + 1, nr_of_zones):
+        zone_positions[missing_zone_id] = nr_of_polygons
+
+    zone_positions[nr_of_zones] = nr_of_polygons
     print("...Done.\n")
-    return poly_nr2zone_id
+    return zone_positions
 
 
 # TODO extract in own h3 utils module
@@ -736,14 +746,90 @@ def parse_data(
     input_path: Union[Path, str] = DEFAULT_INPUT_PATH,
     output_path: Union[Path, str] = DEFAULT_DATA_DIR,
 ):
+    global polygons, polygon_lengths, poly_zone_ids, poly_boundaries, nr_of_polygons, \
+        polynrs_of_holes, holes, all_hole_lengths, nr_of_holes
+
     input_path = Path(input_path)
     output_path = Path(output_path)
     output_path.mkdir(parents=True, exist_ok=True)
 
     parse_polygons_from_json(input_path)
 
-    compile_data_files(output_path)
     shortcuts = compile_shortcut_mapping()
+
+    # create a mapping from h3 cell to a unique zone if all polygons in this cell belong to the same zone
+    print("creating unique zone mapping...")
+    unique_zone_mapping = {}
+    for hex_id, poly_ids in shortcuts.items():
+        if not poly_ids:
+            continue
+
+        zone_ids = {poly_zone_ids[poly_id] for poly_id in poly_ids}
+        if len(zone_ids) == 1:
+            (unique_zone_id,) = zone_ids
+            unique_zone_mapping[hex_id] = int(unique_zone_id)
+
+    # identify polygons that can be deleted because they only appear in shortcuts with a unique zone
+    print("identifying polygons that can be deleted...")
+    polys_in_non_unique_hexs = set()
+    for hex_id, poly_ids in shortcuts.items():
+        if hex_id not in unique_zone_mapping:
+            polys_in_non_unique_hexs.update(poly_ids)
+
+    all_poly_ids_set = set(range(nr_of_polygons))
+    polys_to_delete = all_poly_ids_set - polys_in_non_unique_hexs
+
+    if polys_to_delete:
+        print(f"found {len(polys_to_delete)} of {nr_of_polygons} polygons to delete.")
+        # Create a mapping from old polygon ID to new polygon ID for re-indexing
+        old_to_new_poly_id = {}
+        new_id_counter = 0
+        for i in range(nr_of_polygons):
+            if i not in polys_to_delete:
+                old_to_new_poly_id[i] = new_id_counter
+                new_id_counter += 1
+
+        # Now, filter and remap all the global data structures
+        polygons = [p for i, p in enumerate(polygons) if i not in polys_to_delete]
+        polygon_lengths = [l for i, l in enumerate(polygon_lengths) if i not in polys_to_delete]
+        poly_zone_ids = [zid for i, zid in enumerate(poly_zone_ids) if i not in polys_to_delete]
+        poly_boundaries = [b for i, b in enumerate(poly_boundaries) if i not in polys_to_delete]
+        nr_of_polygons = len(polygons)
+
+        # Handle holes: if a polygon is deleted, its holes must be deleted too.
+        new_holes, new_all_hole_lengths, new_polynrs_of_holes = [], [], []
+        for i, hole_poly in enumerate(holes):
+            original_poly_id = polynrs_of_holes[i]
+            if original_poly_id not in polys_to_delete:
+                new_holes.append(hole_poly)
+                new_all_hole_lengths.append(all_hole_lengths[i])
+                new_polynrs_of_holes.append(old_to_new_poly_id[original_poly_id])
+        holes, all_hole_lengths, polynrs_of_holes = new_holes, new_all_hole_lengths, new_polynrs_of_holes
+        nr_of_holes = len(holes)
+
+        # Remap shortcuts: For unique zones, the list is empty. For others, remap polygon IDs.
+        new_shortcuts = {}
+        for hex_id, poly_ids in shortcuts.items():
+            if hex_id in unique_zone_mapping:
+                new_shortcuts[hex_id] = []
+            else:
+                new_shortcuts[hex_id] = [old_to_new_poly_id[p_id] for p_id in poly_ids]
+        shortcuts = new_shortcuts
+
+    else:
+        print("no polygons can be deleted.")
+        print("clearing polygon lists in shortcuts for unique zones...")
+        for hex_id in unique_zone_mapping:
+            shortcuts[hex_id] = []
+
+    # Now that data is finalized, compile the data files.
+    compile_data_files(output_path)
+
+    # write the unique zone mapping to a separate file
+    unique_zones_output_file = get_unique_zone_file_path(output_path)
+    write_unique_zones_flatbuffers(unique_zone_mapping, unique_zones_output_file)
+
+    # write the shortcut mapping to a file
     output_file = get_shortcut_file_path(output_path)
     write_shortcuts_flatbuffers(shortcuts, output_file)
 
