@@ -43,9 +43,13 @@ jobs:
           flatc --python --gen-mutable timezonefinder/flatbuf/polygon_schema.fbs
           flatc --python --gen-mutable timezonefinder/flatbuf/shortcut_schema.fbs
 
+      - name: Install timezonefinder project
+        # Explicitly install the timezonefinder package, which includes building its CFFI extension.
+        # This ensures the package is available and its extension compiled before tox runs tests.
+        run: uv install .
+
       - name: Install tox and test runner dependencies
         # Install tox and other general test dependencies required to run the tox suite.
-        # Tox will handle installing the project and its specific dependencies for each test environment.
         run: uv sync --group test
 
       - name: Run tox test suite for Python 3.12
