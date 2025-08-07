@@ -49,17 +49,7 @@ fi
 echo "START PARSING..."
 SCRIPT_PATH=./scripts/file_converter.py
 echo "calling $SCRIPT_PATH:"
-python "$SCRIPT_PATH" -inp "$JSON_PATH" -out "$DESTINATION_PATH"
-
-echo "runnings tests..."
-if ! tox; then
-    # assert that all tests are passing
-    echo "tests failed!"
-    exit 1
-fi
-
-# minor version bump
-uv run --bump minor
+uv run python "$SCRIPT_PATH" -inp "$JSON_PATH" -out "$DESTINATION_PATH"
 
 # TODO
  read -r -p "should all temporary data files be deleted (0: No, 1: Yes)?" do_deletion
