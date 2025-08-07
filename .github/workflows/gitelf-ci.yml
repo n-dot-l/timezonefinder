@@ -37,15 +37,18 @@ jobs:
           # uv manages its own cache.
           ignore-empty-workdir: true # Ensure uv setup doesn't fail if no pyproject.toml is found at root initially
 
-      - name: Install test dependencies
-        run: uv sync --group test
-        # This installs tox and other dependencies required to run the test suite.
+      - name: Install all project and test dependencies
+        run: uv sync --all-groups
+        # This installs core project dependencies (h3, numpy, flatbuffers) and test dependencies (tox, pytest).
 
       - name: Install FlatBuffers compiler
         run: sudo apt-get update && sudo apt-get install -y flatbuffers-compiler
 
       - name: Compile FlatBuffer schemas
         run: make flatbuf
+
+      - name: Generate timezone data files
+        run: bash parse_data.sh
 
       - name: Run tox
         # Running 'uv run tox' without specifying an environment will execute
