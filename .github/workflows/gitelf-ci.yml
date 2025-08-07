@@ -31,7 +31,15 @@ jobs:
 
       - name: Install system build dependencies
         # Required for building the CFFI extension used by timezonefinder
-        run: sudo apt-get update && sudo apt-get install -y libffi-dev clang make
+        # flatbuffers-compiler is needed for flatc
+        run: sudo apt-get update && sudo apt-get install -y libffi-dev clang make flatbuffers-compiler
+
+      - name: Compile FlatBuffer schemas
+        # These Python files are generated from .fbs schemas and are needed for the package build.
+        # The 'flatc' command generates Python files from the Flatbuffer schema definitions.
+        run: |
+          flatc --python --gen-mutable timezonefinder/flatbuf/polygon_schema.fbs
+          flatc --python --gen-mutable timezonefinder/flatbuf/shortcut_schema.fbs
 
       - name: Create uv virtual environment
         run: uv venv
