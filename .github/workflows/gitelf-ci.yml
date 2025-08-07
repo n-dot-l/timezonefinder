@@ -30,32 +30,24 @@ jobs:
         uses: astral-sh/setup-uv@v6
 
       - name: Install system build dependencies
-        # Required for building the CFFI extension used by timezonefinder
-        # flatbuffers-compiler is needed for flatc
+        # Required for building the CFFI extension used by timezonefinder AND for flatbuffers-compiler
         run: sudo apt-get update && sudo apt-get install -y libffi-dev clang make flatbuffers-compiler
 
       - name: Compile FlatBuffer schemas
         # These Python files are generated from .fbs schemas and are needed for the package build.
         # The 'flatc' command generates Python files from the Flatbuffer schema definitions.
-        # This step must happen before the project is installed by tox.
-        # Note: These files appear to be committed to the repo, so this step ensures consistency.
+        # This step must happen before tox attempts to build and install the package.
         run: |
           flatc --python --gen-mutable timezonefinder/flatbuf/polygon_schema.fbs
           flatc --python --gen-mutable timezonefinder/flatbuf/shortcut_schema.fbs
 
-      - name: Install timezonefinder project
-        # Explicitly install the timezonefinder package, which includes building its CFFI extension.
-        # This ensures the package is available and its extension compiled before tox runs tests.
-        # Corrected 'uv install .' to 'uv pip install .' based on build log error.
-        run: uv pip install .
-
       - name: Install tox and test runner dependencies
         # Install tox and other general test dependencies required to run the tox suite.
+        # This installs 'tox' into the primary uv environment, from which tox will be called.
         run: uv sync --group test
 
       - name: Run tox test suite for Python 3.12
         # This command executes the test suite for Python 3.12 environments, including numba and pytz.
-        # It explicitly runs environments known to be tested in the main build.yml workflow.
-        # If tests fail, tox will exit with a non-zero code,
-        # and GitHub Actions will capture the detailed test failure logs.
+        # Tox, being configured with 'isolated_build = true', will handle installing the project
+        # and its dependencies into its own isolated environments before running tests.
         run: uv run tox -e py312,py312-numba,py312-pytz
