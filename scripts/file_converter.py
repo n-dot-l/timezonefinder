@@ -794,7 +794,6 @@ def parse_data(
     output_file_unique_zones = get_unique_zone_file_path(output_path)
     write_unique_zones_flatbuffers(unique_zones, output_file_unique_zones)
 
-
     print(f"\n\nfinished parsing timezonefinder data to {output_path}")
     write_data_report(
         shortcuts,

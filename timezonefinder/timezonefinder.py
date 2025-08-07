@@ -190,7 +190,6 @@ class AbstractTimezoneFinder(ABC):
         hex_id = h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)
         return self.unique_zone_mapping.get(hex_id)
 
-
     @abstractmethod
     def timezone_at(self, *, lng: float, lat: float) -> Optional[str]:
         """looks up in which timezone the given coordinate is included in
