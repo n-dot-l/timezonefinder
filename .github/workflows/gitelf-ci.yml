@@ -1,0 +1,46 @@
+name: gitelf-ci
+
+on:
+  push:
+    branches:
+      - 'gitelf-*'
+
+jobs:
+  pre-commit-hooks:
+    name: Run pre-commit hooks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run pre-commit hook
+        uses: pre-commit/action@v3.0.1
+        # pre-commit.ci will automatically fail if checks don't pass.
+        # The output will clearly indicate any formatting or linting issues.
+
+  test:
+    name: Run test suite
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          # Cache uv dependencies to speed up subsequent runs
+          cache: 'uv' 
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Install test dependencies
+        run: uv sync --group test
+        # uv will output detailed error messages to the log if dependency installation fails.
+
+      - name: Run tox test suite for Python 3.12
+        run: uv run tox -e "py312,py312-numba,py312-pytz,docs"
+        env:
+          # Ensure tox doesn't skip environments if interpreters are not explicitly found (though setup-python should handle this).
+          TOX_SKIP_MISSING_INTERPRETERS: False 
+        # tox will provide a comprehensive summary of passed/failed tests and detailed logs for any failures.
+        # This output serves as the "specific error messages to the build log on failure".
