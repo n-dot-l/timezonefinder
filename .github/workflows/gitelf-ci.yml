@@ -37,7 +37,8 @@ jobs:
           FLATC_ARCHIVE="flatc_linux.tar.gz"
           FLATC_URL="https://github.com/google/flatbuffers/releases/download/v${FLATC_VERSION}/${FLATC_ARCHIVE}"
           echo "Downloading flatc from $FLATC_URL"
-          curl -L $FLATC_URL -o ${FLATC_ARCHIVE}
+          curl -L -v $FLATC_URL -o ${FLATC_ARCHIVE} # Added -v for verbose output
+          ls -lh ${FLATC_ARCHIVE} # Added to check downloaded file size
           tar xzf ${FLATC_ARCHIVE}
           echo "Moving flatc to /usr/local/bin/"
           sudo mv flatc /usr/local/bin/
