@@ -5,11 +5,12 @@ Unit tests for the shortcut_utils module.
 import os
 import tempfile
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 import numpy as np
 import pytest
 
+from timezonefinder.configs import NO_UNIQUE_ZONE # Import NO_UNIQUE_ZONE
 from timezonefinder.flatbuf.shortcut_utils import (
     write_shortcuts_flatbuffers,
     read_shortcuts_binary,
@@ -20,16 +21,16 @@ class TestShortcutUtils:
     """Test cases for shortcut_utils functions."""
 
     @pytest.mark.parametrize(
-        "shortcut_mapping",
+        "shortcut_mapping_input",
         [
-            {123: [1, 2, 3]},
-            {456: [4, 5, 6], 789: [7, 8, 9]},
-            {101112: [10, 11, 12, 13, 14]},
+            {123: ([1, 2, 3], NO_UNIQUE_ZONE)},
+            {456: ([4, 5, 6], 10), 789: ([7, 8, 9], NO_UNIQUE_ZONE)},
+            {101112: ([10, 11, 12, 13, 14], 20)},
             {},  # Empty dictionary
         ],
     )
     def test_write_read_shortcuts_roundtrip(
-        self, shortcut_mapping: Dict[int, List[int]]
+        self, shortcut_mapping_input: Dict[int, Tuple[List[int], int]]
     ):
         """
         Test that writing shortcuts to a file and reading them back
@@ -40,7 +41,7 @@ class TestShortcutUtils:
 
         try:
             # Write the shortcuts to the temporary file
-            write_shortcuts_flatbuffers(shortcut_mapping, temp_path)
+            write_shortcuts_flatbuffers(shortcut_mapping_input, temp_path)
 
             # Check that the file exists and has content
             assert os.path.exists(temp_path)
@@ -50,13 +51,15 @@ class TestShortcutUtils:
             result = read_shortcuts_binary(temp_path)
 
             # Verify the result
-            assert len(result) == len(shortcut_mapping)
+            assert len(result) == len(shortcut_mapping_input)
 
-            for hex_id, poly_ids in shortcut_mapping.items():
+            for hex_id, (poly_ids_expected, unique_zone_id_expected) in shortcut_mapping_input.items():
                 assert hex_id in result
+                poly_ids_actual, unique_zone_id_actual = result[hex_id]
                 np.testing.assert_array_equal(
-                    result[hex_id], np.array(poly_ids, dtype=np.uint16)
+                    poly_ids_actual, np.array(poly_ids_expected, dtype=np.uint16)
                 )
+                assert unique_zone_id_actual == unique_zone_id_expected
 
         finally:
             # Clean up the temporary file
@@ -84,16 +87,17 @@ class TestShortcutUtils:
             read_shortcuts_binary(non_existent_path)
 
     @pytest.mark.parametrize(
-        "hex_id,poly_ids",
+        "hex_id,poly_ids,unique_zone_id",
         [
-            (0, [0]),  # Minimal case
-            (2**32 - 1, list(range(10))),  # Maximum uint32 with multiple polygons
-            (42, list(range(100))),  # Many polygon IDs
+            (0, [0], NO_UNIQUE_ZONE),  # Minimal case
+            (2**32 - 1, list(range(10)), 100),  # Maximum uint32 with multiple polygons and a unique zone
+            (42, list(range(100)), NO_UNIQUE_ZONE),  # Many polygon IDs
+            (1000, [], 5), # Empty poly_ids, but unique zone
         ],
     )
-    def test_write_read_specific_values(self, hex_id: int, poly_ids: List[int]):
+    def test_write_read_specific_values(self, hex_id: int, poly_ids: List[int], unique_zone_id: int):
         """Test with specific boundary values to ensure correct handling."""
-        shortcut_mapping = {hex_id: poly_ids}
+        shortcut_mapping = {hex_id: (poly_ids, unique_zone_id)}
 
         with tempfile.NamedTemporaryFile(delete=False) as temp_file:
             temp_path = Path(temp_file.name)
@@ -103,17 +107,22 @@ class TestShortcutUtils:
             result = read_shortcuts_binary(temp_path)
 
             assert hex_id in result
+            poly_ids_actual, unique_zone_id_actual = result[hex_id]
             np.testing.assert_array_equal(
-                result[hex_id], np.array(poly_ids, dtype=np.uint16)
+                poly_ids_actual, np.array(poly_ids, dtype=np.uint16)
             )
+            assert unique_zone_id_actual == unique_zone_id
         finally:
             if os.path.exists(temp_path):
                 os.unlink(temp_path)
 
     def test_large_data_handling(self):
         """Test with a larger dataset to ensure performance and memory handling."""
-        # Create a larger dictionary with many entries
-        large_mapping = {i: list(range(i % 10, i % 10 + 5)) for i in range(1000)}
+        # Create a larger dictionary with many entries, some with unique_zone_id
+        large_mapping = {
+            i: (list(range(i % 10, i % 10 + 5)), i % 2 == 0 and i % 10 < 5 and i % 10 or NO_UNIQUE_ZONE)
+            for i in range(1000)
+        }
 
         with tempfile.NamedTemporaryFile(delete=False) as temp_file:
             temp_path = Path(temp_file.name)
@@ -127,9 +136,12 @@ class TestShortcutUtils:
             # Check a sample of the results
             for i in range(0, 1000, 100):
                 if i in large_mapping:  # Just to be safe
+                    poly_ids_expected, unique_zone_id_expected = large_mapping[i]
+                    poly_ids_actual, unique_zone_id_actual = result[i]
                     np.testing.assert_array_equal(
-                        result[i], np.array(large_mapping[i], dtype=np.uint16)
+                        poly_ids_actual, np.array(poly_ids_expected, dtype=np.uint16)
                     )
+                    assert unique_zone_id_actual == unique_zone_id_expected
         finally:
             if os.path.exists(temp_path):
                 os.unlink(temp_path)
