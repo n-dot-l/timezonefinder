@@ -25,7 +25,9 @@ repos:
           # linter.
           - id: ruff
             args: [ --fix ]
+            exclude: ^timezonefinder/flatbuf/.*\.py$
           - id: ruff-format
+            exclude: ^timezonefinder/flatbuf/.*\.py$
 
     -   repo: https://github.com/asottile/blacken-docs
         rev: 1.19.1
