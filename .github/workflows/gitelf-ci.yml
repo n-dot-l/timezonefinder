@@ -50,6 +50,10 @@ jobs:
       - name: Generate timezone data files
         run: bash parse_data.sh
 
+      - name: Install test dependencies
+        run: uv sync --group test
+        # This installs tox and other dependencies required to run the test suite.
+
       - name: Run tox
         # Running 'uv run tox' without specifying an environment will execute
         # all environments defined in the 'envlist' in tox.ini, ensuring
