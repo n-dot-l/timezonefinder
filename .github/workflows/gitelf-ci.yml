@@ -31,22 +31,6 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v6
 
-      - name: Download and install flatc
-        run: |
-          FLATC_VERSION="24.3.25" # Updated to a more recent stable version
-          FLATC_ARCHIVE="flatc_linux.tar.gz"
-          FLATC_URL="https://github.com/google/flatbuffers/releases/download/v${FLATC_VERSION}/${FLATC_ARCHIVE}"
-          echo "Downloading flatc from $FLATC_URL"
-          curl -L -v $FLATC_URL -o ${FLATC_ARCHIVE}
-          ls -lh ${FLATC_ARCHIVE}
-          tar xzf ${FLATC_ARCHIVE}
-          echo "Moving flatc to /usr/local/bin/"
-          sudo mv flatc /usr/local/bin/
-          rm ${FLATC_ARCHIVE}
-
-      - name: Compile FlatBuffers schemas
-        run: make flatbuf
-
       - name: Install test dependencies
         run: uv sync --group test
         # Standard error reporting from uv and GitHub Actions should be sufficient.
