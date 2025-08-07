@@ -31,6 +31,9 @@ jobs:
       - name: Compile FlatBuffer schemas
         run: make flatbuf
 
+      - name: Generate timezone data
+        run: make data
+
       - name: Set up Python 3.12
         uses: actions/setup-python@v5
         with:
