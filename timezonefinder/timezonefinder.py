@@ -73,6 +73,9 @@ class AbstractTimezoneFinder(ABC):
         path2shortcut_bin = get_shortcut_file_path(self.data_location)
         self.shortcut_mapping = read_shortcuts_binary(path2shortcut_bin)
 
+        path2unique_zone_bin = get_unique_zone_file_path(self.data_location)
+        self.unique_zone_mapping = read_unique_zones_binary(path2unique_zone_bin)
+
         zone_ids_path = get_zone_ids_path(self.data_location)
         self.zone_ids = read_per_polygon_vector(zone_ids_path)
 
@@ -183,17 +186,9 @@ class AbstractTimezoneFinder(ABC):
         :param lat: The latitude of the point in degrees (90.0 to -90.0).
         :return: The unique zone ID or None if no polygons exist in the shortcut.
         """
-        polys = self.get_boundaries_in_shortcut(lng=lng, lat=lat)
-        if len(polys) == 0:
-            return None
-        if len(polys) == 1:
-            return self.zone_id_of(polys[0])
-        zones = self.zone_ids_of(polys)
-        zones_unique = np.unique(zones)
-        if len(zones_unique) == 1:
-            return zones_unique[0]
-        # more than one zone in this shortcut
-        return None
+        hex_id = h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)
+        return self.unique_zone_mapping.get(hex_id)
+
 
     @abstractmethod
     def timezone_at(self, *, lng: float, lat: float) -> Optional[str]:

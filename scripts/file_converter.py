@@ -84,6 +84,10 @@ from timezonefinder.flatbuf.shortcut_utils import (
     get_shortcut_file_path,
     write_shortcuts_flatbuffers,
 )
+from timezonefinder.flatbuf.unique_zone_utils import (
+    get_unique_zone_file_path,
+    write_unique_zones_flatbuffers,
+)
 from timezonefinder.configs import DEFAULT_DATA_DIR, SHORTCUT_H3_RES
 from timezonefinder.np_binary_helpers import (
     get_xmax_path,
@@ -110,6 +114,7 @@ from timezonefinder.zone_names import write_zone_names
 SHORTCUT_H3_RES = 0 if DEBUG else SHORTCUT_H3_RES
 
 ShortcutMapping = Dict[int, List[int]]
+UniqueZoneMapping = Dict[int, int]
 
 nr_of_polygons = -1
 nr_of_zones = -1
@@ -518,10 +523,9 @@ def optimise_shortcut_ordering(poly_ids: List[int]) -> List[int]:
     return poly_ids_sorted
 
 
-def compile_h3_map(candidates: Set) -> ShortcutMapping:
+def compile_h3_map(candidates: Set[int]) -> ShortcutMapping:
     """
-    operate on one hex resolution
-    also store results separately to divide the output data files
+    operates on one hex resolution to compile the shortcut mapping.
     """
     global poly_zone_ids
 
@@ -535,7 +539,7 @@ def compile_h3_map(candidates: Set) -> ShortcutMapping:
         nr_candidates = len(candidates)
         processed = total_candidates - nr_candidates
         print(
-            f"\r{processed:,} processed\t{nr_candidates:,} remaining\t",
+            f"\rShortcuts: {processed:,} processed\t{nr_candidates:,} remaining\t",
             end="",
             flush=True,
         )
@@ -544,22 +548,12 @@ def compile_h3_map(candidates: Set) -> ShortcutMapping:
         hex_id = candidates.pop()
         cell = get_hex(hex_id)
         polys = list(cell.polys_in_cell)
-        # TODO separate optimisation into separate function
         polys_optimised = optimise_shortcut_ordering(polys)
         check_shortcut_sorting(polys_optimised, poly_zone_ids)
         mapping[hex_id] = polys_optimised
         report_progress()
 
     return mapping
-
-
-def all_res_candidates(res: int) -> HexIdSet:
-    print(f"compiling hex candidates for resolution {res}.")
-    if res == 0:
-        return set(h3.get_res0_cells())
-    parent_res_candidates = all_res_candidates(res - 1)
-    child_iter = (h3.cell_to_children(h) for h in parent_res_candidates)
-    return set(itertools.chain.from_iterable(child_iter))
 
 
 @time_execution
@@ -579,6 +573,54 @@ def compile_shortcut_mapping() -> ShortcutMapping:
     shortcuts = compile_h3_map(candidates=candidates)
     # Shortcut statistics will be printed in the reporting module
     return shortcuts
+
+
+def compile_unique_zone_mapping(candidates: Set[int]) -> UniqueZoneMapping:
+    """
+    compiles a mapping from hexid to unique zone id for cells with only one timezone.
+    """
+    mapping: UniqueZoneMapping = {}
+    total_candidates = len(candidates)
+
+    def report_progress():
+        nr_candidates = len(candidates)
+        processed = total_candidates - nr_candidates
+        print(
+            f"\rUnique Zones: {processed:,} processed\t{nr_candidates:,} remaining\t",
+            end="",
+            flush=True,
+        )
+
+    while candidates:
+        hex_id = candidates.pop()
+        cell = get_hex(hex_id)
+        zones = cell.zones_in_cell
+        if len(zones) == 1:
+            mapping[hex_id] = list(zones)[0]
+        report_progress()
+
+    return mapping
+
+
+@time_execution
+def compile_unique_zone_data() -> UniqueZoneMapping:
+    """
+    Compiles the unique zone mapping for H3 hexagons.
+    """
+    print("\n\ncomputing unique zone mapping...")
+    candidates = all_res_candidates(SHORTCUT_H3_RES)
+    unique_zones = compile_unique_zone_mapping(candidates=candidates)
+    print("...Unique Zone Mapping computation complete.")
+    return unique_zones
+
+
+def all_res_candidates(res: int) -> HexIdSet:
+    print(f"compiling hex candidates for resolution {res}.")
+    if res == 0:
+        return set(h3.get_res0_cells())
+    parent_res_candidates = all_res_candidates(res - 1)
+    child_iter = (h3.cell_to_children(h) for h in parent_res_candidates)
+    return set(itertools.chain.from_iterable(child_iter))
 
 
 def create_and_write_hole_registry(polynrs_of_holes, output_path):
@@ -743,9 +785,15 @@ def parse_data(
     parse_polygons_from_json(input_path)
 
     compile_data_files(output_path)
+
     shortcuts = compile_shortcut_mapping()
-    output_file = get_shortcut_file_path(output_path)
-    write_shortcuts_flatbuffers(shortcuts, output_file)
+    output_file_shortcuts = get_shortcut_file_path(output_path)
+    write_shortcuts_flatbuffers(shortcuts, output_file_shortcuts)
+
+    unique_zones = compile_unique_zone_data()
+    output_file_unique_zones = get_unique_zone_file_path(output_path)
+    write_unique_zones_flatbuffers(unique_zones, output_file_unique_zones)
+
 
     print(f"\n\nfinished parsing timezonefinder data to {output_path}")
 
