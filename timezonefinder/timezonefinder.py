@@ -27,10 +27,6 @@ from timezonefinder.flatbuf.unique_zone_utils import (
     get_unique_zone_file_path,
     read_unique_zones_binary,
 )
-from timezonefinder.flatbuf.unique_zone_utils import (
-    get_unique_zone_file_path,
-    read_unique_zones_binary,
-)
 from timezonefinder.zone_names import read_zone_names
 
 
