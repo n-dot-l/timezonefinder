@@ -84,6 +84,10 @@ from timezonefinder.flatbuf.shortcut_utils import (
     get_shortcut_file_path,
     write_shortcuts_flatbuffers,
 )
+from timezonefinder.flatbuf.unique_zone_shortcut_utils import ( # NEW IMPORT
+    get_unique_zone_shortcut_file_path,
+    write_unique_zone_shortcuts_flatbuffers,
+)
 from timezonefinder.configs import DEFAULT_DATA_DIR, SHORTCUT_H3_RES
 from timezonefinder.np_binary_helpers import (
     get_xmax_path,
@@ -518,7 +522,7 @@ def optimise_shortcut_ordering(poly_ids: List[int]) -> List[int]:
     return poly_ids_sorted
 
 
-def compile_h3_map(candidates: Set) -> ShortcutMapping:
+def compile_h3_map(candidates: Set) -> Tuple[ShortcutMapping, Dict[int, int]]: # Modified return type
     """
     operate on one hex resolution
     also store results separately to divide the output data files
@@ -529,6 +533,7 @@ def compile_h3_map(candidates: Set) -> ShortcutMapping:
     poly_zone_ids = np.array(poly_zone_ids, dtype=DTYPE_FORMAT_H_NUMPY)
 
     mapping: ShortcutMapping = {}
+    unique_zone_mapping: Dict[int, int] = {} # NEW
     total_candidates = len(candidates)
 
     def report_progress():
@@ -544,13 +549,19 @@ def compile_h3_map(candidates: Set) -> ShortcutMapping:
         hex_id = candidates.pop()
         cell = get_hex(hex_id)
         polys = list(cell.polys_in_cell)
-        # TODO separate optimisation into separate function
+        
+        # Check for unique zone and store it
+        if len(polys) > 0:
+            zones_in_cell = set(poly_zone_ids[p] for p in polys)
+            if len(zones_in_cell) == 1:
+                unique_zone_mapping[hex_id] = zones_in_cell.pop()
+            
         polys_optimised = optimise_shortcut_ordering(polys)
         check_shortcut_sorting(polys_optimised, poly_zone_ids)
         mapping[hex_id] = polys_optimised
         report_progress()
 
-    return mapping
+    return mapping, unique_zone_mapping # Modified return
 
 
 def all_res_candidates(res: int) -> HexIdSet:
@@ -743,14 +754,19 @@ def parse_data(
     parse_polygons_from_json(input_path)
 
     compile_data_files(output_path)
-    shortcuts = compile_shortcut_mapping()
+    
+    shortcuts, unique_zone_shortcuts = compile_shortcut_mapping() # Modified
     output_file = get_shortcut_file_path(output_path)
     write_shortcuts_flatbuffers(shortcuts, output_file)
+
+    unique_zone_output_file = get_unique_zone_shortcut_file_path(output_path) # NEW
+    write_unique_zone_shortcuts_flatbuffers(unique_zone_shortcuts, unique_zone_output_file) # NEW
 
     print(f"\n\nfinished parsing timezonefinder data to {output_path}")
 
     write_data_report(
         shortcuts,
+        unique_zone_shortcuts, # NEW
         output_path,
         nr_of_polygons,
         nr_of_zones,

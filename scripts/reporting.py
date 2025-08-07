@@ -476,6 +476,7 @@ def report_file_sizes(output_path: Path) -> None:
 
 def write_data_report(
     shortcuts: Dict[int, List[int]],
+    unique_zone_shortcuts: Dict[int, int], # NEW ARG
     output_path: Path,
     nr_of_polygons: int,
     nr_of_zones: int,
@@ -514,4 +515,19 @@ def write_data_report(
         all_tz_names,
     )
     print_shortcut_statistics(shortcuts, poly_zone_ids)
+    
+    print(rst_title("Unique Zone Shortcut Statistics", level=1))
+    nr_unique_zone_shortcuts = len(unique_zone_shortcuts)
+    total_shortcuts = len(shortcuts)
+    
+    unique_zone_percentage = round((nr_unique_zone_shortcuts / total_shortcuts) * 100, 2) if total_shortcuts > 0 else 0
+    
+    headers = ["Metric", "Value"]
+    rows = [
+        ["Total H3 Cells in Index", f"{total_shortcuts:,}"],
+        ["H3 Cells with Unique Zone Shortcut", f"{nr_unique_zone_shortcuts:,}"],
+        ["Percentage of Unique Zone Shortcuts", f"{unique_zone_percentage:.2f}%"]
+    ]
+    print_rst_table(headers, rows)
+    
     report_file_sizes(output_path)
