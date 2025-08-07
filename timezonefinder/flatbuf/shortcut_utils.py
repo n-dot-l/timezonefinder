@@ -13,7 +13,7 @@ from timezonefinder.flatbuf.ShortcutEntry import (
     ShortcutEntryAddHexId,
     ShortcutEntryAddPolyIds,
     ShortcutEntryStartPolyIdsVector,
-    ShortcutEntryAddUniqueZoneId, # New import
+    ShortcutEntryAddUniqueZoneId,  # New import
 )
 from timezonefinder.flatbuf.ShortcutCollection import (
     ShortcutCollection,
@@ -85,7 +85,7 @@ def write_shortcuts_flatbuffers(
 
 def read_shortcuts_binary(
     file_path: Path,
-) -> Dict[int, Tuple[np.ndarray, Optional[int]]]: # Modified return type
+) -> Dict[int, Tuple[np.ndarray, Optional[int]]]:  # Modified return type
     """
     Read shortcut mapping from a FlatBuffer binary file.
 

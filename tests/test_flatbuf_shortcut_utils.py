@@ -110,7 +110,7 @@ class TestShortcutUtils:
             np.testing.assert_array_equal(
                 result[hex_id][0], np.array(poly_ids, dtype=np.uint16)
             )
-            assert result[hex_id][1] is None # Ensure unique_zone_id is None
+            assert result[hex_id][1] is None  # Ensure unique_zone_id is None
         finally:
             if os.path.exists(temp_path):
                 os.unlink(temp_path)
@@ -118,7 +118,9 @@ class TestShortcutUtils:
     def test_large_data_handling(self):
         """Test with a larger dataset to ensure performance and memory handling."""
         # Create a larger dictionary with many entries, including the None for unique_zone_id
-        large_mapping = {i: (list(range(i % 10, i % 10 + 5)), None) for i in range(1000)}
+        large_mapping = {
+            i: (list(range(i % 10, i % 10 + 5)), None) for i in range(1000)
+        }
 
         with tempfile.NamedTemporaryFile(delete=False) as temp_file:
             temp_path = Path(temp_file.name)

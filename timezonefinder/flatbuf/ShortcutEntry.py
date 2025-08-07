@@ -71,7 +71,7 @@ class ShortcutEntry:
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(8))
         if o != 0:
             return self._tab.Get(flatbuffers.number_types.Int16Flags, o + self._tab.Pos)
-        return -1 # Default value as per schema
+        return -1  # Default value as per schema
 
 
 def ShortcutEntryStart(builder):
