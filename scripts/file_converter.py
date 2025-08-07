@@ -84,7 +84,7 @@ from timezonefinder.flatbuf.shortcut_utils import (
     get_shortcut_file_path,
     write_shortcuts_flatbuffers,
 )
-from timezonefinder.flatbuf.shortcut_schema import NO_UNIQUE_ZONE # Add this import
+
 from timezonefinder.configs import DEFAULT_DATA_DIR, SHORTCUT_H3_RES
 from timezonefinder.np_binary_helpers import (
     get_xmax_path,
