@@ -84,6 +84,10 @@ from timezonefinder.flatbuf.shortcut_utils import (
     get_shortcut_file_path,
     write_shortcuts_flatbuffers,
 )
+from timezonefinder.flatbuf.unique_zone_utils import ( # Added import
+    get_unique_zone_file_path, # Added import
+    write_unique_zones_flatbuffers, # Added import
+)
 from timezonefinder.configs import DEFAULT_DATA_DIR, SHORTCUT_H3_RES
 from timezonefinder.np_binary_helpers import (
     get_xmax_path,
@@ -746,6 +750,25 @@ def parse_data(
     shortcuts = compile_shortcut_mapping()
     output_file = get_shortcut_file_path(output_path)
     write_shortcuts_flatbuffers(shortcuts, output_file)
+
+    # Compute and store unique zone shortcut mapping
+    print("\n\ncomputing unique zone shortcut mapping...")
+    unique_zone_mapping: Dict[int, int] = {}
+    for hex_id, poly_ids in shortcuts.items():
+        if not poly_ids:  # If no polygons in this cell, no unique zone
+            continue
+
+        # Get zone IDs for all polygons in this cell
+        zone_ids_in_cell = {poly_zone_ids[p_id] for p_id in poly_ids}
+
+        # If all polygons belong to the same zone, store it
+        if len(zone_ids_in_cell) == 1:
+            unique_zone_id = next(iter(zone_ids_in_cell))  # Get the single element
+            unique_zone_mapping[hex_id] = unique_zone_id
+
+    unique_zone_output_file = get_unique_zone_file_path(output_path)
+    write_unique_zones_flatbuffers(unique_zone_mapping, unique_zone_output_file)
+    print(f"Stored {len(unique_zone_mapping)} unique zone shortcuts.")
 
     print(f"\n\nfinished parsing timezonefinder data to {output_path}")
 
