@@ -37,20 +37,19 @@ jobs:
       - name: Compile FlatBuffer schemas
         # These Python files are generated from .fbs schemas and are needed for the package build.
         # The 'flatc' command generates Python files from the Flatbuffer schema definitions.
+        # This step must happen before the project is installed by tox.
         run: |
           flatc --python --gen-mutable timezonefinder/flatbuf/polygon_schema.fbs
           flatc --python --gen-mutable timezonefinder/flatbuf/shortcut_schema.fbs
 
-      - name: Create uv virtual environment
-        run: uv venv
+      - name: Install tox and test runner dependencies
+        # Install tox and other general test dependencies required to run the tox suite.
+        # Tox will handle installing the project and its specific dependencies for each test environment.
+        run: uv sync --group test
 
-      - name: Install project and test dependencies
-        # Install the project itself (including compiling C extensions via setup.py)
-        # and all relevant test dependency groups.
-        run: uv pip install .[test,numba,pytz]
-
-      - name: Run all pytest tests
-        # This command executes the entire test suite.
-        # If tests fail, pytest will exit with a non-zero code,
+      - name: Run tox test suite
+        # This command executes the entire test suite as defined in tox.ini.
+        # Tox will manage virtual environments and install the project for each test scenario.
+        # If tests fail, tox will exit with a non-zero code,
         # and GitHub Actions will capture the detailed test failure logs.
-        run: uv run pytest
+        run: uv run tox
