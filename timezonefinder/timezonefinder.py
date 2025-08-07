@@ -67,7 +67,9 @@ class AbstractTimezoneFinder(ABC):
         self.timezone_names = read_zone_names(self.data_location)
 
         path2shortcut_bin = get_shortcut_file_path(self.data_location)
-        self.shortcut_mapping: Dict[int, Tuple[np.ndarray, Optional[int]]] = read_shortcuts_binary(path2shortcut_bin)
+        self.shortcut_mapping: Dict[int, Tuple[np.ndarray, Optional[int]]] = (
+            read_shortcuts_binary(path2shortcut_bin)
+        )
 
         zone_ids_path = get_zone_ids_path(self.data_location)
         self.zone_ids = read_per_polygon_vector(zone_ids_path)
@@ -154,7 +156,7 @@ class AbstractTimezoneFinder(ABC):
         hex_id = h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)
         # self.shortcut_mapping now returns a tuple (poly_ids, unique_zone_id)
         shortcut_data = self.shortcut_mapping[hex_id]
-        shortcut_boundary_ids = shortcut_data[0] # Get poly_ids
+        shortcut_boundary_ids = shortcut_data[0]  # Get poly_ids
         return shortcut_boundary_ids
 
     def most_common_zone_id(self, *, lng: float, lat: float) -> Optional[int]:
@@ -184,12 +186,12 @@ class AbstractTimezoneFinder(ABC):
         # This method will be optimized by checking the precomputed value first.
         hex_id = h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)
         shortcut_data = self.shortcut_mapping[hex_id]
-        precomputed_unique_zone_id = shortcut_data[1] # Get unique_zone_id
+        precomputed_unique_zone_id = shortcut_data[1]  # Get unique_zone_id
         if precomputed_unique_zone_id is not None:
             return precomputed_unique_zone_id
 
         # Fallback to current calculation if not precomputed (e.g., old data, or if this function is called directly)
-        polys = shortcut_data[0] # Get poly_ids
+        polys = shortcut_data[0]  # Get poly_ids
         if len(polys) == 0:
             return None
         if len(polys) == 1:
@@ -480,8 +482,8 @@ class TimezoneFinder(AbstractTimezoneFinder):
         lng, lat = utils.validate_coordinates(lng, lat)
         hex_id = h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)
         shortcut_data = self.shortcut_mapping[hex_id]
-        possible_boundaries = shortcut_data[0] # Get poly_ids
-        precomputed_unique_zone_id = shortcut_data[1] # Get unique_zone_id
+        possible_boundaries = shortcut_data[0]  # Get poly_ids
+        precomputed_unique_zone_id = shortcut_data[1]  # Get unique_zone_id
 
         if precomputed_unique_zone_id is not None:
             # If a unique zone ID is precomputed for this shortcut, return it immediately.
@@ -544,8 +546,8 @@ class TimezoneFinder(AbstractTimezoneFinder):
         # Fetch shortcut data including the precomputed unique_zone_id
         hex_id = h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)
         shortcut_data = self.shortcut_mapping[hex_id]
-        possible_boundaries = shortcut_data[0] # Get poly_ids
-        precomputed_unique_zone_id = shortcut_data[1] # Get unique_zone_id
+        possible_boundaries = shortcut_data[0]  # Get poly_ids
+        precomputed_unique_zone_id = shortcut_data[1]  # Get unique_zone_id
 
         if precomputed_unique_zone_id is not None:
             # If a unique zone ID is precomputed, it means all polygons in this shortcut
@@ -558,7 +560,6 @@ class TimezoneFinder(AbstractTimezoneFinder):
             # The issue description states "immediately return ... in case of a match".
             # For `certain_timezone_at`, a precomputed unique_zone_id means we are certain.
             return self.zone_name_from_id(precomputed_unique_zone_id)
-
 
         nr_possible_boundaries = len(possible_boundaries)
 
