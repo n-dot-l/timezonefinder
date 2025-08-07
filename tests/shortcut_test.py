@@ -50,7 +50,8 @@ def test_shortcut_completeness(tf):
             lat = int2coord(pt[1])
             hex_id = latlng_to_cell(lng, lat)
             try:
-                shortcut_entries = shortcuts[hex_id]
+                shortcut_data = shortcuts[hex_id]
+                shortcut_entries = shortcut_data[0]  # Get poly_ids
             except KeyError:
                 errors.append(
                     f"shortcut mapping is incomplete at point ({lng}, {lat}) "
@@ -87,7 +88,7 @@ def test_unused_polygons(tf):
 
     # check if all polygons are used in the shortcuts
     used_polygons = set()
-    for poly_ids in shortcuts.values():
+    for poly_ids, _ in shortcuts.values():  # Unpack the tuple
         used_polygons.update(poly_ids)
 
     all_polygon_ids = set(range(nr_of_polygons))
@@ -102,7 +103,7 @@ def test_empty_shortcut():
     """Test that no shortcut entries are empty (all should have polygons)."""
     # since using timezone data with ocean coverage all the cells should have polygons in them
     empty_shortcuts = []
-    for hex_id, polygon_ids in shortcuts.items():
+    for hex_id, (polygon_ids, _) in shortcuts.items():  # Unpack the tuple
         if len(polygon_ids) == 0:
             boundary = h3.cell_to_boundary(hex_id)[0]
             empty_shortcuts.append(f"Hexagon {hex_id} at {boundary}")
@@ -133,7 +134,7 @@ def test_unique_pole_cells():
 def test_shortcut_uniqueness():
     """Test that shortcuts are unique (no duplicates in polygon IDs)."""
     duplicates = []
-    for hex_id, polygon_ids in shortcuts.items():
+    for hex_id, (polygon_ids, _) in shortcuts.items():  # Unpack the tuple
         if len(np.unique(polygon_ids)) != len(polygon_ids):
             duplicates.append(
                 f"Shortcut {hex_id} contains duplicate polygon IDs: {polygon_ids}"
@@ -161,7 +162,7 @@ def test_has_coherent_check_fct(lst, expected):
 def test_shortcut_sorting(tf):
     """Test that shortcuts are correctly sorted by zone ID and polygon size."""
     invalid_sortings = []
-    for hex_id, polygon_ids in shortcuts.items():
+    for hex_id, (polygon_ids, _) in shortcuts.items():  # Unpack the tuple
         try:
             check_shortcut_sorting(polygon_ids, tf.zone_ids)
         except AssertionError as e:

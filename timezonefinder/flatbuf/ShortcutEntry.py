@@ -66,9 +66,16 @@ class ShortcutEntry:
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(6))
         return o == 0
 
+    # ShortcutEntry
+    def UniqueZoneId(self):
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(8))
+        if o != 0:
+            return self._tab.Get(flatbuffers.number_types.Int16Flags, o + self._tab.Pos)
+        return -1  # Default value as per schema
+
 
 def ShortcutEntryStart(builder):
-    builder.StartObject(2)
+    builder.StartObject(3)
 
 
 def Start(builder):
@@ -99,6 +106,14 @@ def ShortcutEntryStartPolyIdsVector(builder, numElems):
 
 def StartPolyIdsVector(builder, numElems):
     return ShortcutEntryStartPolyIdsVector(builder, numElems)
+
+
+def ShortcutEntryAddUniqueZoneId(builder, uniqueZoneId):
+    builder.PrependInt16Slot(2, uniqueZoneId, -1)
+
+
+def AddUniqueZoneId(builder, uniqueZoneId):
+    ShortcutEntryAddUniqueZoneId(builder, uniqueZoneId)
 
 
 def ShortcutEntryEnd(builder):

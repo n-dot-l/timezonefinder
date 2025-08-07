@@ -6,6 +6,9 @@ table ShortcutEntry {
   hex_id:ulong;
   // List of polygon IDs (uint16) in this hexagon
   poly_ids:[ushort];
+  // If all poly_ids belong to a single zone, this is that zone's ID (int16).
+  // -1 indicates no unique zone or no polygons.
+  unique_zone_id:short;
 }
 
 table ShortcutCollection {

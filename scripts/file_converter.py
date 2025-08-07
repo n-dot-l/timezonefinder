@@ -43,10 +43,12 @@ in res=3 it takes only slightly more space to store just the highest resolution 
 
 from pathlib import Path
 
+
+from typing import Dict, List, NamedTuple, Optional, Set, Tuple, Union
+
 import functools
 import itertools
 from dataclasses import dataclass
-from typing import Dict, List, NamedTuple, Optional, Set, Tuple, Union
 
 
 import h3.api.numpy_int as h3
@@ -109,7 +111,8 @@ from timezonefinder.zone_names import write_zone_names
 # lower the shortcut resolution for debugging
 SHORTCUT_H3_RES = 0 if DEBUG else SHORTCUT_H3_RES
 
-ShortcutMapping = Dict[int, List[int]]
+# ShortcutMapping now stores a tuple: (list of polygon IDs, optional unique zone ID)
+ShortcutMapping = Dict[int, Tuple[List[int], Optional[int]]]
 
 nr_of_polygons = -1
 nr_of_zones = -1
@@ -268,6 +271,9 @@ def lies_in_h3_cell(h: int, lng: float, lat: float) -> bool:
 
 
 def any_pt_in_cell(h: int, poly_nr: int) -> bool:
+    # Get the global poly_zone_ids
+    global poly_zone_ids
+
     def pt_in_cell(pt: np.ndarray) -> bool:
         # ATTENTION: must first convert integers back to coord floats!
         lng = int2coord(pt[0])
@@ -362,6 +368,8 @@ class Hex:
         return self.x_overflow or self.surr_n_pole or self.surr_s_pole
 
     def _init_candidates(self):
+        # Access global poly_zone_ids
+        global poly_zone_ids
         """
         here one might be tempted to only consider the actual detected zones of the parent cell
         to narrow down choice and speed up the computation up.
@@ -520,8 +528,8 @@ def optimise_shortcut_ordering(poly_ids: List[int]) -> List[int]:
 
 def compile_h3_map(candidates: Set) -> ShortcutMapping:
     """
-    operate on one hex resolution
-    also store results separately to divide the output data files
+    Compiles the H3 hexagon shortcut mapping, including unique zone IDs.
+    Returns: mapping from hexagon id to tuple (list of polygon ids, optional unique zone id)
     """
     global poly_zone_ids
 
@@ -544,10 +552,25 @@ def compile_h3_map(candidates: Set) -> ShortcutMapping:
         hex_id = candidates.pop()
         cell = get_hex(hex_id)
         polys = list(cell.polys_in_cell)
-        # TODO separate optimisation into separate function
         polys_optimised = optimise_shortcut_ordering(polys)
         check_shortcut_sorting(polys_optimised, poly_zone_ids)
-        mapping[hex_id] = polys_optimised
+
+        unique_zone_id: Optional[int] = None
+        if len(polys_optimised) > 0:
+            # Check if all polygons in polys_optimised belong to the same zone
+            first_zone_id = poly_zone_ids[polys_optimised[0]]
+            all_same_zone = True
+            for p_id in polys_optimised:
+                if poly_zone_ids[p_id] != first_zone_id:
+                    all_same_zone = False
+                    break
+            if all_same_zone:
+                unique_zone_id = first_zone_id
+
+        mapping[hex_id] = (
+            polys_optimised,
+            unique_zone_id,
+        )  # Store as tuple (poly_ids, unique_zone_id)
         report_progress()
 
     return mapping
