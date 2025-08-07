@@ -796,7 +796,6 @@ def parse_data(
 
 
     print(f"\n\nfinished parsing timezonefinder data to {output_path}")
-    
     write_data_report(
         shortcuts,
         output_path,
