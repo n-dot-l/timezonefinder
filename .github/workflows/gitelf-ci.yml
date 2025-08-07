@@ -31,9 +31,6 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v6
 
-      - name: Compile Flatbuffers
-        run: make flatbuf
-
       - name: Install test dependencies
         run: uv sync --group test
         # Standard error reporting from uv and GitHub Actions should be sufficient.
