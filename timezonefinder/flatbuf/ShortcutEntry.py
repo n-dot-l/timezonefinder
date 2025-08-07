@@ -68,7 +68,7 @@ class ShortcutEntry:
 
 
 def ShortcutEntryStart(builder):
-    builder.StartObject(2)
+    builder.StartObject(3)
 
 
 def Start(builder):
@@ -99,6 +99,14 @@ def ShortcutEntryStartPolyIdsVector(builder, numElems):
 
 def StartPolyIdsVector(builder, numElems):
     return ShortcutEntryStartPolyIdsVector(builder, numElems)
+
+
+def ShortcutEntryAddUniqueZoneId(builder, uniqueZoneId):
+    builder.PrependUint16Slot(2, uniqueZoneId, 65535)
+
+
+def AddUniqueZoneId(builder, uniqueZoneId):
+    ShortcutEntryAddUniqueZoneId(builder, uniqueZoneId)
 
 
 def ShortcutEntryEnd(builder):
