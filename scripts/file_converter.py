@@ -88,6 +88,10 @@ from timezonefinder.flatbuf.unique_zone_shortcut_utils import ( # NEW IMPORT
     get_unique_zone_shortcut_file_path,
     write_unique_zone_shortcuts_flatbuffers,
 )
+from timezonefinder.flatbuf.unique_zone_shortcut_utils import ( # NEW IMPORT
+    get_unique_zone_shortcut_file_path,
+    write_unique_zone_shortcuts_flatbuffers,
+)
 from timezonefinder.configs import DEFAULT_DATA_DIR, SHORTCUT_H3_RES
 from timezonefinder.np_binary_helpers import (
     get_xmax_path,
