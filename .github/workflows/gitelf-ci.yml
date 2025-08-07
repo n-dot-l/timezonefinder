@@ -1,0 +1,44 @@
+name: gitelf-ci
+
+on:
+  push:
+    branches:
+      - 'gitelf-*'
+
+jobs:
+  pre-commit-hooks:
+    name: run pre-commit hooks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run pre-commit hook
+        uses: pre-commit/action@v3.0.1
+
+  test:
+    name: Run tests and docs
+    runs-on: ubuntu-latest
+    env:
+      TOX_SKIP_MISSING_INTERPRETERS: False # As in the original build.yml
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12" # A representative version for faster CI
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Install test dependencies
+        run: uv sync --group test
+        # Standard error reporting from uv and GitHub Actions should be sufficient.
+        # If specific custom messages are needed, they can be added later.
+
+      - name: Run tox (py312, numba, pytz, docs)
+        # Runs the comprehensive test environments for Python 3.12,
+        # mirroring a subset of the original build.yml's matrix for a faster run.
+        run: uv run tox -e py312,py312-numba,py312-pytz,docs
+        # Standard error reporting from tox and GitHub Actions should be sufficient.
+        # If specific custom messages are needed, they can be added later.
