@@ -66,6 +66,15 @@ class ShortcutEntry:
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(6))
         return o == 0
 
+    # ShortcutEntry
+    def UniqueZoneId(self):
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(8))
+        if o != 0:
+            return self._tab.Get(
+                flatbuffers.number_types.Uint16Flags, o + self._tab.Pos
+            )
+        return 65535
+
 
 def ShortcutEntryStart(builder):
     builder.StartObject(3)
