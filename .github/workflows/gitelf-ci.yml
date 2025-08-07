@@ -1,0 +1,47 @@
+name: GitElf CI
+
+on:
+  push:
+    branches:
+      - 'gitelf-*'
+
+jobs:
+  pre-commit-hooks:
+    name: Run pre-commit hooks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run pre-commit hook
+        uses: pre-commit/action@v3.0.1
+        # This action fails the step if any pre-commit hook fails,
+        # which provides clear error messages in the build log.
+
+  test:
+    name: Run all tests (via Tox)
+    runs-on: ubuntu-latest
+    # Ensure pre-commit checks pass before running tests
+    needs: pre-commit-hooks
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: 'uv' # Cache uv dependencies for faster builds
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Install test dependencies
+        run: uv sync --group test
+        # This installs tox and other dependencies required to run the test suite.
+
+      - name: Run tox
+        # Running 'uv run tox' without specifying an environment will execute
+        # all environments defined in the 'envlist' in tox.ini, ensuring
+        # comprehensive test coverage on this single Python version.
+        run: uv run tox
+        # Tox provides detailed output for test failures, including traceback and
+        # summary, fulfilling the requirement for specific error messages.
