@@ -39,13 +39,13 @@ jobs:
 
       - name: Install test dependencies
         run: uv sync --group test
+        # This installs tox and other dependencies required to run the test suite.
 
       - name: Install FlatBuffers compiler
         run: sudo apt-get update && sudo apt-get install -y flatbuffers-compiler
 
       - name: Compile FlatBuffer schemas
         run: make flatbuf
-        # This installs tox and other dependencies required to run the test suite.
 
       - name: Run tox
         # Running 'uv run tox' without specifying an environment will execute
