@@ -29,6 +29,10 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v6
 
+      - name: Install system build dependencies
+        # Required for building the CFFI extension used by timezonefinder
+        run: sudo apt-get update && sudo apt-get install -y libffi-dev clang make
+
       - name: Create uv virtual environment
         run: uv venv
 
