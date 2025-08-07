@@ -522,7 +522,7 @@ def optimise_shortcut_ordering(poly_ids: List[int]) -> List[int]:
     return poly_ids_sorted
 
 
-def compile_h3_map(candidates: Set) -> Tuple[ShortcutMapping, Dict[int, int]]: # Modified return type
+def compile_h3_map(candidates: Set) -> Tuple[ShortcutMapping, Dict[int, int]]:
     """
     operate on one hex resolution
     also store results separately to divide the output data files
@@ -533,7 +533,7 @@ def compile_h3_map(candidates: Set) -> Tuple[ShortcutMapping, Dict[int, int]]: #
     poly_zone_ids = np.array(poly_zone_ids, dtype=DTYPE_FORMAT_H_NUMPY)
 
     mapping: ShortcutMapping = {}
-    unique_zone_mapping: Dict[int, int] = {} # NEW
+    unique_zone_mapping: Dict[int, int] = {}
     total_candidates = len(candidates)
 
     def report_progress():
@@ -561,7 +561,7 @@ def compile_h3_map(candidates: Set) -> Tuple[ShortcutMapping, Dict[int, int]]: #
         mapping[hex_id] = polys_optimised
         report_progress()
 
-    return mapping, unique_zone_mapping # Modified return
+    return mapping, unique_zone_mapping
 
 
 def all_res_candidates(res: int) -> HexIdSet:
@@ -574,7 +574,7 @@ def all_res_candidates(res: int) -> HexIdSet:
 
 
 @time_execution
-def compile_shortcut_mapping() -> ShortcutMapping:
+def compile_shortcut_mapping() -> Tuple[ShortcutMapping, Dict[int, int]]:
     """compiles h3 hexagon shortcut mapping
 
     returns: mapping from hexagon id to list of polygon ids
@@ -587,9 +587,9 @@ def compile_shortcut_mapping() -> ShortcutMapping:
         f"reached desired resolution {SHORTCUT_H3_RES}.\n"
         "storing mapping to timezone polygons for every hexagon candidate at this resolution (-> 'full coverage')"
     )
-    shortcuts = compile_h3_map(candidates=candidates)
+    shortcuts_and_unique_zones = compile_h3_map(candidates=candidates)
     # Shortcut statistics will be printed in the reporting module
-    return shortcuts
+    return shortcuts_and_unique_zones
 
 
 def create_and_write_hole_registry(polynrs_of_holes, output_path):
