@@ -5,7 +5,7 @@ Utility functions for working with unique zone shortcut data in FlatBuffers.
 from pathlib import Path
 from typing import Dict
 import flatbuffers
-import numpy as np
+
 from timezonefinder.configs import DEFAULT_DATA_DIR
 from timezonefinder.flatbuf.UniqueZoneShortcutEntry import (
     UniqueZoneShortcutEntryStart,
@@ -41,7 +41,9 @@ def write_unique_zone_shortcuts_flatbuffers(
     Returns:
         None
     """
-    print(f"writing {len(unique_zone_shortcut_mapping)} unique zone shortcuts to binary file {output_file}")
+    print(
+        f"writing {len(unique_zone_shortcut_mapping)} unique zone shortcuts to binary file {output_file}"
+    )
     builder = flatbuffers.Builder(0)
     entry_offsets = []
 
@@ -86,7 +88,9 @@ def read_unique_zone_shortcuts_binary(
     with open(file_path, "rb") as f:
         buf = f.read()
 
-    collection = UniqueZoneShortcutCollection.GetRootAsUniqueZoneShortcutCollection(buf, 0)
+    collection = UniqueZoneShortcutCollection.GetRootAsUniqueZoneShortcutCollection(
+        buf, 0
+    )
 
     unique_zone_shortcut_mapping = {}
     for i in range(collection.EntriesLength()):

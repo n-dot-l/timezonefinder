@@ -75,8 +75,12 @@ class AbstractTimezoneFinder(ABC):
         self.shortcut_mapping = read_shortcuts_binary(path2shortcut_bin)
 
         # Load the new unique zone shortcut mapping
-        path2unique_zone_shortcut_bin = get_unique_zone_shortcut_file_path(self.data_location)
-        self.unique_zone_shortcut_mapping = read_unique_zone_shortcuts_binary(path2unique_zone_shortcut_bin)
+        path2unique_zone_shortcut_bin = get_unique_zone_shortcut_file_path(
+            self.data_location
+        )
+        self.unique_zone_shortcut_mapping = read_unique_zone_shortcuts_binary(
+            path2unique_zone_shortcut_bin
+        )
 
         zone_ids_path = get_zone_ids_path(self.data_location)
         self.zone_ids = read_per_polygon_vector(zone_ids_path)
@@ -209,7 +213,9 @@ class AbstractTimezoneFinder(ABC):
         """
         return self.unique_zone_shortcut_mapping.get(hex_id)
 
-    def unique_timezone_name_at_location(self, *, lng: float, lat: float) -> Optional[str]:
+    def unique_timezone_name_at_location(
+        self, *, lng: float, lat: float
+    ) -> Optional[str]:
         """
         Get the unique timezone name for a given location using the precomputed unique zone shortcuts.
 
@@ -222,7 +228,6 @@ class AbstractTimezoneFinder(ABC):
         if zone_id is None:
             return None
         return self.zone_name_from_id(zone_id)
-
 
     @abstractmethod
     def timezone_at(self, *, lng: float, lat: float) -> Optional[str]:
