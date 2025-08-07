@@ -6,7 +6,7 @@ import flatbuffers
 from flatbuffers.compat import import_numpy
 np = import_numpy()
 
-class UniqueZoneShortcutEntry(object):
+class UniqueZoneShortcutEntry:
     __slots__ = ['_tab']
 
     @classmethod

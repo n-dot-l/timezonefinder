@@ -476,7 +476,7 @@ def report_file_sizes(output_path: Path) -> None:
 
 def write_data_report(
     shortcuts: Dict[int, List[int]],
-    unique_zone_shortcuts: Dict[int, int], # NEW ARG
+    unique_zone_shortcuts: Dict[int, int],
     output_path: Path,
     nr_of_polygons: int,
     nr_of_zones: int,

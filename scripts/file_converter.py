@@ -84,11 +84,11 @@ from timezonefinder.flatbuf.shortcut_utils import (
     get_shortcut_file_path,
     write_shortcuts_flatbuffers,
 )
-from timezonefinder.flatbuf.unique_zone_shortcut_utils import ( # NEW IMPORT
+from timezonefinder.flatbuf.unique_zone_shortcut_utils import (
     get_unique_zone_shortcut_file_path,
     write_unique_zone_shortcuts_flatbuffers,
 )
-from timezonefinder.flatbuf.unique_zone_shortcut_utils import ( # NEW IMPORT
+from timezonefinder.flatbuf.unique_zone_shortcut_utils import (
     get_unique_zone_shortcut_file_path,
     write_unique_zone_shortcuts_flatbuffers,
 )
@@ -759,18 +759,18 @@ def parse_data(
 
     compile_data_files(output_path)
     
-    shortcuts, unique_zone_shortcuts = compile_shortcut_mapping() # Modified
+    shortcuts, unique_zone_shortcuts = compile_shortcut_mapping()
     output_file = get_shortcut_file_path(output_path)
     write_shortcuts_flatbuffers(shortcuts, output_file)
 
-    unique_zone_output_file = get_unique_zone_shortcut_file_path(output_path) # NEW
-    write_unique_zone_shortcuts_flatbuffers(unique_zone_shortcuts, unique_zone_output_file) # NEW
+    unique_zone_output_file = get_unique_zone_shortcut_file_path(output_path)
+    write_unique_zone_shortcuts_flatbuffers(unique_zone_shortcuts, unique_zone_output_file)
 
     print(f"\n\nfinished parsing timezonefinder data to {output_path}")
 
     write_data_report(
         shortcuts,
-        unique_zone_shortcuts, # NEW
+        unique_zone_shortcuts,
         output_path,
         nr_of_polygons,
         nr_of_zones,

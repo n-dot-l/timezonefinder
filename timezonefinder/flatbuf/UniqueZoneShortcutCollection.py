@@ -7,7 +7,7 @@ from timezonefinder.flatbuf.UniqueZoneShortcutEntry import UniqueZoneShortcutEnt
 from flatbuffers.compat import import_numpy
 np = import_numpy()
 
-class UniqueZoneShortcutCollection(object):
+class UniqueZoneShortcutCollection:
     __slots__ = ['_tab']
 
     @classmethod
