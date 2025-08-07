@@ -33,12 +33,12 @@ jobs:
 
       - name: Download and install flatc
         run: |
-          FLATC_VERSION="23.5.26" # Using a fixed version
+          FLATC_VERSION="24.3.25" # Updated to a more recent stable version
           FLATC_ARCHIVE="flatc_linux.tar.gz"
           FLATC_URL="https://github.com/google/flatbuffers/releases/download/v${FLATC_VERSION}/${FLATC_ARCHIVE}"
           echo "Downloading flatc from $FLATC_URL"
-          curl -L -v $FLATC_URL -o ${FLATC_ARCHIVE} # Added -v for verbose output
-          ls -lh ${FLATC_ARCHIVE} # Added to check downloaded file size
+          curl -L -v $FLATC_URL -o ${FLATC_ARCHIVE}
+          ls -lh ${FLATC_ARCHIVE}
           tar xzf ${FLATC_ARCHIVE}
           echo "Moving flatc to /usr/local/bin/"
           sudo mv flatc /usr/local/bin/
