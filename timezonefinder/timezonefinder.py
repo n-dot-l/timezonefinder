@@ -27,6 +27,10 @@ from timezonefinder.flatbuf.unique_zone_shortcut_utils import (
     get_unique_zone_shortcut_file_path,
     read_unique_zone_shortcuts_binary,
 )
+from timezonefinder.flatbuf.unique_zone_shortcut_utils import (
+    get_unique_zone_shortcut_file_path,
+    read_unique_zone_shortcuts_binary,
+)
 from timezonefinder.zone_names import read_zone_names
 
 
