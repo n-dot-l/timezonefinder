@@ -84,6 +84,7 @@ from timezonefinder.flatbuf.shortcut_utils import (
     get_shortcut_file_path,
     write_shortcuts_flatbuffers,
 )
+from timezonefinder.flatbuf.shortcut_schema import NO_UNIQUE_ZONE # Add this import
 from timezonefinder.configs import DEFAULT_DATA_DIR, SHORTCUT_H3_RES
 from timezonefinder.np_binary_helpers import (
     get_xmax_path,
@@ -109,7 +110,7 @@ from timezonefinder.zone_names import write_zone_names
 # lower the shortcut resolution for debugging
 SHORTCUT_H3_RES = 0 if DEBUG else SHORTCUT_H3_RES
 
-ShortcutMapping = Dict[int, List[int]]
+ShortcutMapping = Dict[int, Tuple[List[int], int]] # NEW type hint
 
 nr_of_polygons = -1
 nr_of_zones = -1
@@ -544,10 +545,25 @@ def compile_h3_map(candidates: Set) -> ShortcutMapping:
         hex_id = candidates.pop()
         cell = get_hex(hex_id)
         polys = list(cell.polys_in_cell)
-        # TODO separate optimisation into separate function
-        polys_optimised = optimise_shortcut_ordering(polys)
-        check_shortcut_sorting(polys_optimised, poly_zone_ids)
-        mapping[hex_id] = polys_optimised
+
+        unique_zone_id_for_hex = NO_UNIQUE_ZONE
+        polys_to_store_in_shortcut = polys
+
+        if len(polys) > 0:
+            # Check if all polygons in this hex cell belong to a unique zone
+            zones_in_cell = set(poly_zone_ids[p] for p in polys)
+            if len(zones_in_cell) == 1:
+                unique_zone_id_for_hex = zones_in_cell.pop()
+                polys_to_store_in_shortcut = [] # Empty the list if a unique zone is found
+
+        if unique_zone_id_for_hex == NO_UNIQUE_ZONE:
+            # Only optimize ordering if there's no unique zone (i.e., multiple zones or no polygons)
+            polys_to_store_in_shortcut = optimise_shortcut_ordering(polys_to_store_in_shortcut)
+            if len(polys_to_store_in_shortcut) > 0: # Only check if not empty
+                check_shortcut_sorting(polys_to_store_in_shortcut, poly_zone_ids)
+
+        # Store the (poly_ids, unique_zone_id) tuple
+        mapping[hex_id] = (polys_to_store_in_shortcut, unique_zone_id_for_hex)
         report_progress()
 
     return mapping

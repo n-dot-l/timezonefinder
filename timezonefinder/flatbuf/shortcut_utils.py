@@ -3,7 +3,7 @@ Utility functions for working with shortcut data in FlatBuffers.
 """
 
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Tuple
 import flatbuffers
 import numpy as np
 from timezonefinder.configs import DEFAULT_DATA_DIR
@@ -13,6 +13,7 @@ from timezonefinder.flatbuf.ShortcutEntry import (
     ShortcutEntryAddHexId,
     ShortcutEntryAddPolyIds,
     ShortcutEntryStartPolyIdsVector,
+    ShortcutEntryAddUniqueZoneId, # Added new import
 )
 from timezonefinder.flatbuf.ShortcutCollection import (
     ShortcutCollection,
@@ -21,6 +22,7 @@ from timezonefinder.flatbuf.ShortcutCollection import (
     ShortcutCollectionAddEntries,
     ShortcutCollectionStartEntriesVector,
 )
+from timezonefinder.flatbuf.shortcut_schema import NO_UNIQUE_ZONE
 
 
 def get_shortcut_file_path(output_path: Path = DEFAULT_DATA_DIR) -> Path:
@@ -29,14 +31,14 @@ def get_shortcut_file_path(output_path: Path = DEFAULT_DATA_DIR) -> Path:
 
 
 def write_shortcuts_flatbuffers(
-    shortcut_mapping: Dict[int, List[int]],
+    shortcut_mapping: Dict[int, Tuple[List[int], int]], # Modified type hint to include unique_zone_id
     output_file: Path = DEFAULT_DATA_DIR,
 ) -> None:
     """
     Write H3 shortcuts to a FlatBuffer binary file.
 
     Args:
-        shortcut_mapping: Dictionary mapping H3 hexagon IDs to lists of polygon IDs
+        shortcut_mapping: Dictionary mapping H3 hexagon IDs to (lists of polygon IDs, unique zone ID)
         output_file: Path to save the FlatBuffer file
 
     Returns:
@@ -46,7 +48,7 @@ def write_shortcuts_flatbuffers(
     builder = flatbuffers.Builder(0)
     entry_offsets = []
 
-    for hex_id, poly_ids in shortcut_mapping.items():
+    for hex_id, (poly_ids, unique_zone_id) in shortcut_mapping.items(): # Unpack tuple
         # Create poly_ids vector
         ShortcutEntryStartPolyIdsVector(builder, len(poly_ids))
         for i in range(len(poly_ids) - 1, -1, -1):
@@ -57,6 +59,7 @@ def write_shortcuts_flatbuffers(
         ShortcutEntryStart(builder)
         ShortcutEntryAddHexId(builder, hex_id)
         ShortcutEntryAddPolyIds(builder, poly_ids_vector)
+        ShortcutEntryAddUniqueZoneId(builder, unique_zone_id) # Add unique_zone_id
         entry_offsets.append(ShortcutEntryEnd(builder))
 
     # Create vector of shortcut entries
@@ -80,7 +83,7 @@ def write_shortcuts_flatbuffers(
 
 def read_shortcuts_binary(
     file_path: Path,
-) -> Dict[int, np.ndarray]:
+) -> Dict[int, Tuple[np.ndarray, int]]: # Modified return type to include unique_zone_id
     """
     Read shortcut mapping from a FlatBuffer binary file.
 
@@ -88,7 +91,7 @@ def read_shortcuts_binary(
         file_path: Path to the shortcut FlatBuffer file.
 
     Returns:
-        Dictionary mapping H3 hexagon IDs to numpy arrays of polygon IDs
+        Dictionary mapping H3 hexagon IDs to (numpy arrays of polygon IDs, unique zone ID)
     """
     with open(file_path, "rb") as f:
         buf = f.read()
@@ -100,6 +103,7 @@ def read_shortcuts_binary(
         entry = collection.Entries(i)
         hex_id = entry.HexId()
         poly_ids = entry.PolyIdsAsNumpy()
-        shortcut_mapping[hex_id] = poly_ids
+        unique_zone_id = entry.UniqueZoneId() # Read unique_zone_id
+        shortcut_mapping[hex_id] = (poly_ids, unique_zone_id) # Store as tuple
 
     return shortcut_mapping
