@@ -25,6 +25,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install FlatBuffers compiler
+        run: sudo apt-get update && sudo apt-get install -y flatbuffers-compiler
+
+      - name: Compile FlatBuffer schemas
+        run: make flatbuf
+
       - name: Set up Python 3.12
         uses: actions/setup-python@v5
         with:
