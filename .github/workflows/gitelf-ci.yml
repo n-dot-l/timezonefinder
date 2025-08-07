@@ -46,7 +46,8 @@ jobs:
       - name: Install timezonefinder project
         # Explicitly install the timezonefinder package, which includes building its CFFI extension.
         # This ensures the package is available and its extension compiled before tox runs tests.
-        run: uv install .
+        # Corrected 'uv install .' to 'uv pip install .' based on build log error.
+        run: uv pip install .
 
       - name: Install tox and test runner dependencies
         # Install tox and other general test dependencies required to run the tox suite.
