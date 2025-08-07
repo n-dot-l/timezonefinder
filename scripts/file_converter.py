@@ -43,9 +43,7 @@ in res=3 it takes only slightly more space to store just the highest resolution 
 
 from pathlib import Path
 
-import functools
-import itertools
-from dataclasses import dataclass
+
 from typing import Dict, List, NamedTuple, Optional, Set, Tuple, Union
 
 import functools
