@@ -25,15 +25,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install FlatBuffers compiler
-        run: sudo apt-get update && sudo apt-get install -y flatbuffers-compiler
-
-      - name: Compile FlatBuffer schemas
-        run: make flatbuf
-
-      - name: Generate timezone data
-        run: make data
-
       - name: Set up Python 3.12
         uses: actions/setup-python@v5
         with:
@@ -49,6 +40,15 @@ jobs:
       - name: Install test dependencies
         run: uv sync --group test
         # This installs tox and other dependencies required to run the test suite.
+
+      - name: Install FlatBuffers compiler
+        run: sudo apt-get update && sudo apt-get install -y flatbuffers-compiler
+
+      - name: Compile FlatBuffer schemas
+        run: make flatbuf
+
+      - name: Generate timezone data
+        run: make data
 
       - name: Run tox
         # Running 'uv run tox' without specifying an environment will execute
