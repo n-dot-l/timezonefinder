@@ -161,7 +161,7 @@ def test_has_coherent_check_fct(lst, expected):
 def test_shortcut_sorting(tf):
     """Test that shortcuts are correctly sorted by zone ID and polygon size."""
     invalid_sortings = []
-    for hex_id, polygon_ids in shortcuts.items():
+    for hex_id, (polygon_ids, _) in shortcuts.items(): # Unpack the tuple
         try:
             check_shortcut_sorting(polygon_ids, tf.zone_ids)
         except AssertionError as e:

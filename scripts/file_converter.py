@@ -560,7 +560,7 @@ def compile_h3_map(candidates: Set) -> ShortcutMapping:
             # Only optimize ordering if there's no unique zone (i.e., multiple zones or no polygons)
             polys_to_store_in_shortcut = optimise_shortcut_ordering(polys_to_store_in_shortcut)
             if len(polys_to_store_in_shortcut) > 0: # Only check if not empty
-                check_shortcut_sorting(mapping[hex_id], poly_zone_ids, polygon_lengths) # Pass the whole tuple and polygon_lengths
+                check_shortcut_sorting(polys_to_store_in_shortcut, poly_zone_ids) # Pass only poly_ids
 
         # Store the (poly_ids, unique_zone_id) tuple
         mapping[hex_id] = (polys_to_store_in_shortcut, unique_zone_id_for_hex)
