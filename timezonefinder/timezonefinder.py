@@ -39,7 +39,7 @@ class AbstractTimezoneFinder(ABC):
     __slots__ = [
         "data_location",
         "shortcut_mapping",
-        "unique_zone_mapping", # Added for mypy __slots__ error
+        "unique_zone_mapping",  # Added for mypy __slots__ error
         "in_memory",
         "_fromfile",
         "timezone_names",
