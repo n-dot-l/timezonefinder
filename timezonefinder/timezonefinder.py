@@ -20,9 +20,9 @@ from timezonefinder.configs import (
 )
 
 from timezonefinder.flatbuf.shortcut_utils import (
-     get_shortcut_file_path,
-     read_shortcuts_binary,
- )
+    get_shortcut_file_path,
+    read_shortcuts_binary,
+)
 from timezonefinder.flatbuf.unique_zone_utils import (
     get_unique_zone_file_path,
     read_unique_zones_binary,
