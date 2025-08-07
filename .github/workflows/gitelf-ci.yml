@@ -26,21 +26,28 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Set up Python 3.12 for the default tox environment and general uv commands
       - name: Set up Python 3.12
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12' # Using Python 3.12 as a representative version
+          python-version: '3.12'
+
+      # Set up Python 3.13 for the integration tox environment
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
 
       - name: Install uv
         uses: astral-sh/setup-uv@v6
 
-      - name: Install core and test dependencies
-        # uv sync --group test ensures all dependencies required for running tests
-        # including tox and pytest are available in the base environment.
+      - name: Install core and test dependencies (for running tox itself)
+        # uv sync --group test installs dependencies for the currently active python (3.13 here)
+        # and ensures tox and pytest are available. Tox will then create its own envs.
         run: uv sync --group test
         env:
           # This variable prevents tox from trying to download interpreters itself,
-          # relying on the 'actions/setup-python' action.
+          # relying on the 'actions/setup-python' action to put them in PATH.
           TOX_SKIP_MISSING_INTERPRETERS: True
 
       - name: Run unit and non-integration tests (py312 env)
