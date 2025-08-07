@@ -273,12 +273,12 @@ def lies_in_h3_cell(h: int, lng: float, lat: float) -> bool:
 
 
 def any_pt_in_cell(h: int, poly_nr: int) -> bool:
-        # Get the global poly_zone_ids
-        global poly_zone_ids
+    # Get the global poly_zone_ids
+    global poly_zone_ids
 
-        def pt_in_cell(pt: np.ndarray) -> bool:
-            # ATTENTION: must first convert integers back to coord floats!
-            lng = int2coord(pt[0])
+    def pt_in_cell(pt: np.ndarray) -> bool:
+        # ATTENTION: must first convert integers back to coord floats!
+        lng = int2coord(pt[0])
         lat = int2coord(pt[1])
         return lies_in_h3_cell(h, lng, lat)
 
