@@ -22,9 +22,9 @@ class TestShortcutUtils:
     @pytest.mark.parametrize(
         "shortcut_mapping",
         [
-            {123: [1, 2, 3]},
-            {456: [4, 5, 6], 789: [7, 8, 9]},
-            {101112: [10, 11, 12, 13, 14]},
+            {123: ([1, 2, 3], None)},
+            {456: ([4, 5, 6], None), 789: ([7, 8, 9], None)},
+            {101112: ([10, 11, 12, 13, 14], None)},
             {},  # Empty dictionary
         ],
     )
@@ -52,11 +52,14 @@ class TestShortcutUtils:
             # Verify the result
             assert len(result) == len(shortcut_mapping)
 
-            for hex_id, poly_ids in shortcut_mapping.items():
+            for hex_id, (poly_ids, _) in shortcut_mapping.items():
                 assert hex_id in result
+                # Compare only the poly_ids part of the tuple
                 np.testing.assert_array_equal(
-                    result[hex_id], np.array(poly_ids, dtype=np.uint16)
+                    result[hex_id][0], np.array(poly_ids, dtype=np.uint16)
                 )
+                # Ensure unique_zone_id is None for these test cases
+                assert result[hex_id][1] is None
 
         finally:
             # Clean up the temporary file
@@ -93,7 +96,8 @@ class TestShortcutUtils:
     )
     def test_write_read_specific_values(self, hex_id: int, poly_ids: List[int]):
         """Test with specific boundary values to ensure correct handling."""
-        shortcut_mapping = {hex_id: poly_ids}
+        # For this test, we assume no unique zone ID is precomputed for these simple lists.
+        shortcut_mapping = {hex_id: (poly_ids, None)}
 
         with tempfile.NamedTemporaryFile(delete=False) as temp_file:
             temp_path = Path(temp_file.name)
@@ -104,16 +108,17 @@ class TestShortcutUtils:
 
             assert hex_id in result
             np.testing.assert_array_equal(
-                result[hex_id], np.array(poly_ids, dtype=np.uint16)
+                result[hex_id][0], np.array(poly_ids, dtype=np.uint16)
             )
+            assert result[hex_id][1] is None # Ensure unique_zone_id is None
         finally:
             if os.path.exists(temp_path):
                 os.unlink(temp_path)
 
     def test_large_data_handling(self):
         """Test with a larger dataset to ensure performance and memory handling."""
-        # Create a larger dictionary with many entries
-        large_mapping = {i: list(range(i % 10, i % 10 + 5)) for i in range(1000)}
+        # Create a larger dictionary with many entries, including the None for unique_zone_id
+        large_mapping = {i: (list(range(i % 10, i % 10 + 5)), None) for i in range(1000)}
 
         with tempfile.NamedTemporaryFile(delete=False) as temp_file:
             temp_path = Path(temp_file.name)
@@ -127,9 +132,11 @@ class TestShortcutUtils:
             # Check a sample of the results
             for i in range(0, 1000, 100):
                 if i in large_mapping:  # Just to be safe
+                    original_poly_ids, original_unique_zone_id = large_mapping[i]
                     np.testing.assert_array_equal(
-                        result[i], np.array(large_mapping[i], dtype=np.uint16)
+                        result[i][0], np.array(original_poly_ids, dtype=np.uint16)
                     )
+                    assert result[i][1] == original_unique_zone_id
         finally:
             if os.path.exists(temp_path):
                 os.unlink(temp_path)
