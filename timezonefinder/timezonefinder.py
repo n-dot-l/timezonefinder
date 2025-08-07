@@ -34,7 +34,7 @@ class AbstractTimezoneFinder(ABC):
 
     __slots__ = [
         "data_location",
-        "shortcut_mapping", # now stores (poly_ids, unique_zone_id) tuples
+        "shortcut_mapping",  # now stores (poly_ids, unique_zone_id) tuples
         "in_memory",
         "_fromfile",
         "timezone_names",

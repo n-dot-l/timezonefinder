@@ -30,7 +30,7 @@ def get_shortcut_file_path(output_path: Path = DEFAULT_DATA_DIR) -> Path:
 
 
 def write_shortcuts_flatbuffers(
-    shortcut_data: Dict[int, Tuple[List[int], Optional[int]]], # Modified signature
+    shortcut_data: Dict[int, Tuple[List[int], Optional[int]]],  # Modified signature
     output_file: Path = DEFAULT_DATA_DIR,
 ) -> None:
     """
@@ -49,7 +49,7 @@ def write_shortcuts_flatbuffers(
     builder = flatbuffers.Builder(0)
     entry_offsets = []
 
-    for hex_id, (poly_ids, unique_zone_id) in shortcut_data.items(): # Modified loop
+    for hex_id, (poly_ids, unique_zone_id) in shortcut_data.items():  # Modified loop
         # Create poly_ids vector
         ShortcutEntryStartPolyIdsVector(builder, len(poly_ids))
         for i in range(len(poly_ids) - 1, -1, -1):
@@ -61,7 +61,7 @@ def write_shortcuts_flatbuffers(
         ShortcutEntryAddHexId(builder, hex_id)
         ShortcutEntryAddPolyIds(builder, poly_ids_vector)
         if unique_zone_id is not None:
-            ShortcutEntryAddUniqueZoneId(builder, unique_zone_id) # Add unique_zone_id
+            ShortcutEntryAddUniqueZoneId(builder, unique_zone_id)  # Add unique_zone_id
         entry_offsets.append(ShortcutEntryEnd(builder))
 
     # Create vector of shortcut entries
@@ -107,9 +107,9 @@ def read_shortcuts_binary(
         entry = collection.Entries(i)
         hex_id = entry.HexId()
         poly_ids = entry.PolyIdsAsNumpy()
-        unique_zone_id = entry.UniqueZoneId() # Read unique_zone_id
-        if unique_zone_id == -1: # Convert sentinel value back to None
+        unique_zone_id = entry.UniqueZoneId()  # Read unique_zone_id
+        if unique_zone_id == -1:  # Convert sentinel value back to None
             unique_zone_id = None
-        shortcut_mapping[hex_id] = (poly_ids, unique_zone_id) # Store as tuple
+        shortcut_mapping[hex_id] = (poly_ids, unique_zone_id)  # Store as tuple
 
     return shortcut_mapping
