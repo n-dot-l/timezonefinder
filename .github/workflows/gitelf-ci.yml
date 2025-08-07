@@ -16,7 +16,7 @@ jobs:
         uses: pre-commit/action@v3.0.1
 
   test-all:
-    name: Run all tests
+    name: Run all tests (Python 3.12)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -38,6 +38,7 @@ jobs:
         # These Python files are generated from .fbs schemas and are needed for the package build.
         # The 'flatc' command generates Python files from the Flatbuffer schema definitions.
         # This step must happen before the project is installed by tox.
+        # Note: These files appear to be committed to the repo, so this step ensures consistency.
         run: |
           flatc --python --gen-mutable timezonefinder/flatbuf/polygon_schema.fbs
           flatc --python --gen-mutable timezonefinder/flatbuf/shortcut_schema.fbs
@@ -47,9 +48,9 @@ jobs:
         # Tox will handle installing the project and its specific dependencies for each test environment.
         run: uv sync --group test
 
-      - name: Run tox test suite
-        # This command executes the entire test suite as defined in tox.ini.
-        # Tox will manage virtual environments and install the project for each test scenario.
+      - name: Run tox test suite for Python 3.12
+        # This command executes the test suite for Python 3.12 environments, including numba and pytz.
+        # It explicitly runs environments known to be tested in the main build.yml workflow.
         # If tests fail, tox will exit with a non-zero code,
         # and GitHub Actions will capture the detailed test failure logs.
-        run: uv run tox
+        run: uv run tox -e py312,py312-numba,py312-pytz
