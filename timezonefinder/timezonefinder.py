@@ -17,13 +17,14 @@ from timezonefinder.configs import (
     SHORTCUT_H3_RES,
     CoordLists,
     CoordPairs,
+    NO_UNIQUE_ZONE, # Modified import
 )
 
 from timezonefinder.flatbuf.shortcut_utils import (
     get_shortcut_file_path,
     read_shortcuts_binary,
 )
-from timezonefinder.flatbuf.shortcut_schema import NO_UNIQUE_ZONE # Added import for NO_UNIQUE_ZONE
+# from timezonefinder.flatbuf.shortcut_schema import NO_UNIQUE_ZONE # Removed import
 from timezonefinder.zone_names import read_zone_names
 
 

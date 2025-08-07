@@ -1,8 +1,5 @@
 namespace timezonefinder.flatbuf;
 
-// Sentinel value to indicate no unique zone is present
-const NO_UNIQUE_ZONE:ushort = 65535;
-
 // mapping from shortcut id to a list of polygon ids
 table ShortcutEntry {
   // H3 hexagon ID, uint64
@@ -10,8 +7,8 @@ table ShortcutEntry {
   // List of polygon IDs (uint16) in this hexagon
   // This vector will be empty if unique_zone_id is set.
   poly_ids:[ushort];
-  // Unique zone ID (uint16) if only one zone is present in this hexagon, otherwise NO_UNIQUE_ZONE
-  unique_zone_id:ushort = NO_UNIQUE_ZONE;
+  // Unique zone ID (uint16) if only one zone is present in this hexagon, otherwise 65535 (NO_UNIQUE_ZONE)
+  unique_zone_id:ushort = 65535;
 }
 
 table ShortcutCollection {

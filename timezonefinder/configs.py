@@ -7,6 +7,9 @@ import numpy as np
 # h3 library
 SHORTCUT_H3_RES: int = 3
 
+# Sentinel value to indicate no unique zone is present in a shortcut
+NO_UNIQUE_ZONE: int = 65535
+
 OCEAN_TIMEZONE_PREFIX = r"Etc/GMT"
 
 # PATHS

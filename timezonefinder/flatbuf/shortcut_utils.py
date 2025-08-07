@@ -6,14 +6,14 @@ from pathlib import Path
 from typing import Dict, List, Tuple
 import flatbuffers
 import numpy as np
-from timezonefinder.configs import DEFAULT_DATA_DIR
+from timezonefinder.configs import DEFAULT_DATA_DIR, NO_UNIQUE_ZONE # Added NO_UNIQUE_ZONE import
 from timezonefinder.flatbuf.ShortcutEntry import (
     ShortcutEntryStart,
     ShortcutEntryEnd,
     ShortcutEntryAddHexId,
     ShortcutEntryAddPolyIds,
     ShortcutEntryStartPolyIdsVector,
-    ShortcutEntryAddUniqueZoneId, # Added new import
+    ShortcutEntryAddUniqueZoneId,
 )
 from timezonefinder.flatbuf.ShortcutCollection import (
     ShortcutCollection,
@@ -22,7 +22,6 @@ from timezonefinder.flatbuf.ShortcutCollection import (
     ShortcutCollectionAddEntries,
     ShortcutCollectionStartEntriesVector,
 )
-from timezonefinder.flatbuf.shortcut_schema import NO_UNIQUE_ZONE
 
 
 def get_shortcut_file_path(output_path: Path = DEFAULT_DATA_DIR) -> Path:
