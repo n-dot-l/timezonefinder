@@ -37,14 +37,6 @@ jobs:
           # uv manages its own cache.
           ignore-empty-workdir: true # Ensure uv setup doesn't fail if no pyproject.toml is found at root initially
 
-      - name: Install FlatBuffers compiler
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y flatbuffers-compiler
-
-      - name: Compile FlatBuffer schemas
-        run: make flatbuf
-
       - name: Install test dependencies
         run: uv sync --group test
         # This installs tox and other dependencies required to run the test suite.
