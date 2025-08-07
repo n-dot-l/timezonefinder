@@ -1,0 +1,64 @@
+name: GitElf CI
+
+on:
+  push:
+    branches:
+      - 'gitelf-*'
+
+jobs:
+  # This job runs the pre-commit hooks (linter, formatters)
+  # This is a direct copy from the existing build.yml workflow to ensure consistency.
+  pre-commit-hooks:
+    name: Run pre-commit hooks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run pre-commit hook
+        uses: pre-commit/action@v3.0.1
+
+  # This job runs the complete test suite.
+  # It aims to be a faster version of the 'test' job in build.yml by
+  # avoiding the matrix, but still running all necessary test environments.
+  test-suite:
+    name: Run Test Suite
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12' # Using Python 3.12 as a representative version
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Install core and test dependencies
+        # uv sync --group test ensures all dependencies required for running tests
+        # including tox and pytest are available in the base environment.
+        run: uv sync --group test
+        env:
+          # This variable prevents tox from trying to download interpreters itself,
+          # relying on the 'actions/setup-python' action.
+          TOX_SKIP_MISSING_INTERPRETERS: True
+
+      - name: Run unit and non-integration tests (py312 env)
+        run: |
+          echo "::group::Running unit and non-integration tests with tox (py312 environment)..."
+          uv run tox -e py312
+          if [ $? -ne 0 ]; then
+            echo "::error::Unit and non-integration tests failed. Check the logs above for detailed error messages and test summaries."
+            exit 1
+          fi
+          echo "::endgroup::"
+
+      - name: Run integration tests
+        run: |
+          echo "::group::Running integration tests with tox (integration environment)..."
+          uv run tox -e integration
+          if [ $? -ne 0 ]; then
+            echo "::error::Integration tests failed. Check the logs above for detailed error messages and test summaries."
+            exit 1
+          fi
+          echo "::endgroup::"
