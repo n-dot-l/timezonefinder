@@ -144,6 +144,39 @@ def print_shortcut_statistics(mapping: Dict[int, List[int]], poly_zone_ids: List
     print_frequencies(amount_of_different_zones, "timezones/shortcut")
 
 
+@redirect_output_to_file(DATA_REPORT_FILE)
+def print_unique_zone_statistics(mapping: Dict[int, int], all_tz_names: List[str]):
+    print(rst_title("Unique Zone Mapping Statistics", level=1))
+
+    nr_of_entries = len(mapping)
+    print(f"Total unique zone entries: {nr_of_entries:,}")
+
+    if nr_of_entries == 0:
+        print("No unique zone entries found.")
+        return
+
+    zone_ids = list(mapping.values())
+    zone_counts = Counter(zone_ids)
+
+    # Convert zone IDs to zone names for reporting
+    zone_name_counts = {all_tz_names[zone_id]: count for zone_id, count in zone_counts.items()}
+    
+    print("\nDistribution of Unique Zones:")
+    headers = ["Timezone", "Count", "Percentage"]
+    rows = []
+    total_unique_zones_mapped = sum(zone_name_counts.values())
+
+    # Sort by count descending
+    sorted_zone_names = sorted(zone_name_counts.items(), key=lambda item: item[1], reverse=True)
+
+    for zone_name, count in sorted_zone_names:
+        percentage = round((count / total_unique_zones_mapped) * 100, 2) if total_unique_zones_mapped > 0 else 0
+        rows.append([zone_name, f"{count:,}", f"{percentage}%"])
+
+    print_rst_table(headers, rows)
+
+
+
 def generate_metrics_rows(metric_type: str, metrics_dict: Dict) -> List[List]:
     """
     Generate additional metric rows for tables based on a dictionary of metrics.
@@ -476,6 +509,7 @@ def report_file_sizes(output_path: Path) -> None:
 
 def write_data_report(
     shortcuts: Dict[int, List[int]],
+    unique_zones: Dict[int, int],  # Add unique_zones here
     output_path: Path,
     nr_of_polygons: int,
     nr_of_zones: int,
@@ -514,4 +548,5 @@ def write_data_report(
         all_tz_names,
     )
     print_shortcut_statistics(shortcuts, poly_zone_ids)
+    print_unique_zone_statistics(unique_zones, all_tz_names)  # Add this call
     report_file_sizes(output_path)

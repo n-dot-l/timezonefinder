@@ -84,6 +84,10 @@ from timezonefinder.flatbuf.shortcut_utils import (
     get_shortcut_file_path,
     write_shortcuts_flatbuffers,
 )
+from timezonefinder.flatbuf.unique_zone_utils import (
+    get_unique_zone_file_path,
+    write_unique_zones_flatbuffers,
+)
 from timezonefinder.configs import DEFAULT_DATA_DIR, SHORTCUT_H3_RES
 from timezonefinder.np_binary_helpers import (
     get_xmax_path,
@@ -110,6 +114,7 @@ from timezonefinder.zone_names import write_zone_names
 SHORTCUT_H3_RES = 0 if DEBUG else SHORTCUT_H3_RES
 
 ShortcutMapping = Dict[int, List[int]]
+UniqueZoneMapping = Dict[int, int] # Added for clarity
 
 nr_of_polygons = -1
 nr_of_zones = -1
@@ -571,30 +576,56 @@ def compile_shortcut_mapping() -> ShortcutMapping:
     cf. https://eng.uber.com/h3/
     """
     print("\n\ncomputing timezone polygon index ('shortcuts')...")
-    candidates = all_res_candidates(SHORTCUT_H3_RES)
+    candidates_for_shortcuts = all_res_candidates(SHORTCUT_H3_RES)
     print(
         f"reached desired resolution {SHORTCUT_H3_RES}.\n"
         "storing mapping to timezone polygons for every hexagon candidate at this resolution (-> 'full coverage')"
     )
-    shortcuts = compile_h3_map(candidates=candidates)
+    shortcuts = compile_h3_map(candidates=candidates_for_shortcuts)
     # Shortcut statistics will be printed in the reporting module
     return shortcuts
 
 
+@time_execution
+def compile_unique_zone_mapping() -> UniqueZoneMapping:
+    """Compiles H3 hexagon to unique zone ID mapping.
+
+    Returns: Mapping from hexagon id to unique zone id
+    """
+    print("\n\ncomputing unique timezone zone index...")
+    # Use the same resolution for unique zones as for shortcuts
+    candidates_for_unique_zones = all_res_candidates(SHORTCUT_H3_RES)
+    print(
+        f"reached desired resolution {SHORTCUT_H3_RES}.\n"
+        "storing mapping to unique timezone zone for every hexagon candidate at this resolution."
+    )
+
+    unique_zone_mapping: UniqueZoneMapping = {}
+    total_candidates = len(candidates_for_unique_zones) # Use the total for the local copy
+
+    def report_progress_unique(current_remaining: int):
+        processed = total_candidates - current_remaining
+        print(
+            f"\r{processed:,} processed\t{current_remaining:,} remaining\t",
+            end="",
+            flush=True,
+        )
+
+    while candidates_for_unique_zones:
+        hex_id = candidates_for_unique_zones.pop()
+        cell = get_hex(hex_id)
+        zones = list(cell.zones_in_cell) # Get the unique zone IDs in this cell
+
+        if len(zones) == 1:
+            # If there's only one unique zone for this cell, store it
+            unique_zone_mapping[hex_id] = zones[0]
+        report_progress_unique(len(candidates_for_unique_zones))
+
+    return unique_zone_mapping
+
+
 def create_and_write_hole_registry(polynrs_of_holes, output_path):
     """
-    Creates a registry mapping each polygon id to a tuple (number of holes, first hole id),
-    and writes it as JSON to the output path.
-    """
-    hole_registry = {}
-    for i, poly_id in enumerate(polynrs_of_holes):
-        try:
-            amount_of_holes, hole_id = hole_registry[poly_id]
-            hole_registry[poly_id] = (amount_of_holes + 1, hole_id)
-        except KeyError:
-            hole_registry[poly_id] = (1, i)
-    path = get_hole_registry_path(output_path)
-    write_json(hole_registry, path)
 
 
 def to_numpy_array(values: List, dtype: str) -> np.ndarray:
@@ -744,13 +775,18 @@ def parse_data(
 
     compile_data_files(output_path)
     shortcuts = compile_shortcut_mapping()
-    output_file = get_shortcut_file_path(output_path)
-    write_shortcuts_flatbuffers(shortcuts, output_file)
+    output_file_shortcuts = get_shortcut_file_path(output_path)
+    write_shortcuts_flatbuffers(shortcuts, output_file_shortcuts)
+
+    unique_zones = compile_unique_zone_mapping()
+    output_file_unique_zones = get_unique_zone_file_path(output_path)
+    write_unique_zones_flatbuffers(unique_zones, output_file_unique_zones)
 
     print(f"\n\nfinished parsing timezonefinder data to {output_path}")
 
     write_data_report(
         shortcuts,
+        unique_zones, # Add unique_zones to the data report function
         output_path,
         nr_of_polygons,
         nr_of_zones,
