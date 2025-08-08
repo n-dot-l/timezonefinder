@@ -30,7 +30,7 @@ jobs:
         run: |
           echo "::error::Pre-commit hooks failed. Please run 'pre-commit run --all-files' locally and commit the changes."
           exit 1
-          
+
       - name: Install test dependencies
         id: install
         run: uv sync --group test
@@ -41,7 +41,7 @@ jobs:
         run: |
           echo "::error::Failed to install test dependencies using uv sync."
           exit 1
-          
+
       - name: Run tests with tox
         id: test
         run: uv run tox -e py311,py311-numba,py311-pytz
