@@ -16,7 +16,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-          cache: 'uv' # Cache uv dependencies for faster builds
+          # Removed cache: 'uv' as it's not supported by actions/setup-python
 
       - name: Install base tools (uv, tox, pre-commit) and project dependencies
         # Install uv globally, then use uv to install project dependencies
