@@ -152,8 +152,9 @@ def print_shortcut_statistics(mapping: Dict[int, List[int]], poly_zone_ids: List
 def print_unique_zone_statistics(
     shortcuts: Dict[int, List[int]],
     unique_zone_mapping: Dict[int, int],
-    nr_of_polygons: int,
-    polygon_lengths: List[int],
+    original_nr_of_polygons: int,
+    original_polygon_lengths: List[int],
+    deletable_poly_ids: set,
 ):
     print(rst_title("Unique Zone Statistics", level=1))
 
@@ -167,36 +168,15 @@ def print_unique_zone_statistics(
         f"Hexagons with unique zone: {nr_hex_unique:,}/{nr_hex_total:,} ({percent(nr_hex_unique, nr_hex_total)}%)"
     )
 
-    # Now, calculate deletable polygons
-    poly_to_hex: Dict[int, List[int]] = {p: [] for p in range(nr_of_polygons)}
-    for h, polys in shortcuts.items():
-        for p in polys:
-            poly_to_hex[p].append(h)
-
-    deletable_poly_ids = set()
-    for p in range(nr_of_polygons):
-        hex_ids_for_poly = poly_to_hex.get(p)
-        if not hex_ids_for_poly:
-            continue
-
-        is_deletable = True
-        for h in hex_ids_for_poly:
-            if h not in unique_zone_mapping:
-                is_deletable = False
-                break
-
-        if is_deletable:
-            deletable_poly_ids.add(p)
-
     nr_deletable = len(deletable_poly_ids)
-    if nr_of_polygons > 0:
+    if original_nr_of_polygons > 0:
         print(
-            f"Deletable polygons: {nr_deletable:,}/{nr_of_polygons:,} ({percent(nr_deletable, nr_of_polygons)}%)"
+            f"Deletable polygons: {nr_deletable:,}/{original_nr_of_polygons:,} ({percent(nr_deletable, original_nr_of_polygons)}%)"
         )
 
     # also report on data size reduction
-    total_coords = sum(polygon_lengths)
-    deletable_coords = sum(polygon_lengths[p] for p in deletable_poly_ids)
+    total_coords = sum(original_polygon_lengths)
+    deletable_coords = sum(original_polygon_lengths[p] for p in deletable_poly_ids)
     if total_coords > 0:
         print(
             f"Redundant coordinates from deletable polygons: {deletable_coords:,}/{total_coords:,} ({percent(deletable_coords, total_coords)}%)"
@@ -535,30 +515,24 @@ def report_file_sizes(output_path: Path) -> None:
 
 
 def write_data_report(
+    original_shortcuts: Dict[int, List[int]],
     shortcuts: Dict[int, List[int]],
     unique_zone_mapping: Dict[int, int],
+    deletable_poly_ids: set,
     output_path: Path,
     nr_of_polygons: int,
+    original_nr_of_polygons: int,
     nr_of_zones: int,
     polygon_lengths: List[int],
+    original_polygon_lengths: List[int],
     all_hole_lengths: List[int],
     polynrs_of_holes: List[int],
     poly_zone_ids: List[int],
+    original_poly_zone_ids: List[int],
     all_tz_names: List[str],
 ) -> None:
     """
     Writes a complete data report to the report file.
-
-    Args:
-        shortcuts: Mapping of hexagon IDs to polygon IDs
-        output_path: Path to the output directory
-        nr_of_polygons: Number of boundary polygons
-        nr_of_zones: Number of timezone zones
-        polygon_lengths: List of coordinate lengths for each boundary polygon
-        all_hole_lengths: List of coordinate lengths for each hole
-        polynrs_of_holes: List mapping holes to their parent polygons
-        poly_zone_ids: List mapping polygons to zone IDs
-        all_tz_names: List of timezone names
     """
     if DATA_REPORT_FILE.exists():
         print(f"Removing old data report file: {DATA_REPORT_FILE}")
@@ -576,6 +550,10 @@ def write_data_report(
     )
     print_shortcut_statistics(shortcuts, poly_zone_ids)
     print_unique_zone_statistics(
-        shortcuts, unique_zone_mapping, nr_of_polygons, polygon_lengths
+        original_shortcuts,
+        unique_zone_mapping,
+        original_nr_of_polygons,
+        original_polygon_lengths,
+        deletable_poly_ids,
     )
     report_file_sizes(output_path)

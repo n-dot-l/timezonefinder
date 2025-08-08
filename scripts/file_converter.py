@@ -43,6 +43,7 @@ in res=3 it takes only slightly more space to store just the highest resolution 
 
 from pathlib import Path
 
+import copy
 import functools
 import itertools
 from dataclasses import dataclass
@@ -746,10 +747,7 @@ def parse_data(
 
     parse_polygons_from_json(input_path)
 
-    compile_data_files(output_path)
     shortcuts = compile_shortcut_mapping()
-    output_file = get_shortcut_file_path(output_path)
-    write_shortcuts_flatbuffers(shortcuts, output_file)
 
     print("\ncomputing unique zone mapping...")
     unique_zone_mapping = {}
@@ -768,21 +766,118 @@ def parse_data(
         if is_unique:
             unique_zone_mapping[hex_id] = first_zone_id
 
+    print("\nidentifying and removing deletable polygons...")
+    poly_to_hex: Dict[int, List[int]] = {p: [] for p in range(nr_of_polygons)}
+    for h, polys in shortcuts.items():
+        for p in polys:
+            poly_to_hex[p].append(h)
+
+    deletable_poly_ids = set()
+    for p in range(nr_of_polygons):
+        hex_ids_for_poly = poly_to_hex.get(p)
+        if not hex_ids_for_poly:
+            continue
+
+        is_deletable = True
+        for h in hex_ids_for_poly:
+            if h not in unique_zone_mapping:
+                is_deletable = False
+                break
+
+        if is_deletable:
+            deletable_poly_ids.add(p)
+
+    print(f"found {len(deletable_poly_ids)} deletable polygons.")
+
+    # store original data for reporting
+    original_nr_of_polygons = nr_of_polygons
+    original_polygon_lengths = polygon_lengths[:]
+    original_poly_zone_ids = poly_zone_ids[:]
+    original_shortcuts = copy.deepcopy(shortcuts)
+
+    if deletable_poly_ids:
+        # create mapping from old to new polygon IDs
+        old_poly_id_to_new = {}
+        new_poly_id = 0
+        for old_poly_id in range(nr_of_polygons):
+            if old_poly_id not in deletable_poly_ids:
+                old_poly_id_to_new[old_poly_id] = new_poly_id
+                new_poly_id += 1
+
+        # filter shortcuts
+        print("updating shortcuts with new polygon IDs...")
+        new_shortcuts = {}
+        for hex_id, old_poly_ids in shortcuts.items():
+            new_poly_ids = [
+                old_poly_id_to_new[p]
+                for p in old_poly_ids
+                if p not in deletable_poly_ids
+            ]
+            new_shortcuts[hex_id] = optimise_shortcut_ordering(new_poly_ids)
+
+        shortcuts = new_shortcuts
+
+        # filter main polygon data
+        global polygons, poly_zone_ids, polygon_lengths, poly_boundaries, nr_of_polygons
+        global holes, polynrs_of_holes, all_hole_lengths, nr_of_holes
+
+        polygons = [p for i, p in enumerate(polygons) if i not in deletable_poly_ids]
+        poly_zone_ids_list = list(poly_zone_ids)
+        poly_zone_ids = np.array(
+            [
+                p
+                for i, p in enumerate(poly_zone_ids_list)
+                if i not in deletable_poly_ids
+            ],
+            dtype=DTYPE_FORMAT_H_NUMPY,
+        )
+        polygon_lengths = [
+            p for i, p in enumerate(polygon_lengths) if i not in deletable_poly_ids
+        ]
+        poly_boundaries = [
+            p for i, p in enumerate(poly_boundaries) if i not in deletable_poly_ids
+        ]
+        nr_of_polygons = len(polygons)
+
+        # filter hole data
+        new_holes = []
+        new_polynrs_of_holes = []
+        new_all_hole_lengths = []
+        for i, old_poly_id_of_hole in enumerate(polynrs_of_holes):
+            if old_poly_id_of_hole not in deletable_poly_ids:
+                new_holes.append(holes[i])
+                new_polynrs_of_holes.append(old_poly_id_to_new[old_poly_id_of_hole])
+                new_all_hole_lengths.append(all_hole_lengths[i])
+
+        holes = new_holes
+        polynrs_of_holes = new_polynrs_of_holes
+        all_hole_lengths = new_all_hole_lengths
+        nr_of_holes = len(holes)
+
+    compile_data_files(output_path)
+
+    output_file = get_shortcut_file_path(output_path)
+    write_shortcuts_flatbuffers(shortcuts, output_file)
     unique_zones_output_file = get_unique_zones_file_path(output_path)
     write_unique_zones_flatbuffers(unique_zone_mapping, unique_zones_output_file)
 
     print(f"\n\nfinished parsing timezonefinder data to {output_path}")
 
     write_data_report(
+        original_shortcuts,
         shortcuts,
         unique_zone_mapping,
+        deletable_poly_ids,
         output_path,
         nr_of_polygons,
+        original_nr_of_polygons,
         nr_of_zones,
         polygon_lengths,
+        original_polygon_lengths,
         all_hole_lengths,
         polynrs_of_holes,
         poly_zone_ids,
+        original_poly_zone_ids,
         all_tz_names,
     )
 
