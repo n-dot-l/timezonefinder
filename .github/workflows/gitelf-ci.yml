@@ -1,0 +1,42 @@
+name: GitElf CI
+
+on:
+  push:
+    branches:
+      - 'gitelf-*'
+
+jobs:
+  lint:
+    name: Run pre-commit hooks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run pre-commit hook
+        uses: pre-commit/action@v3.0.1
+      
+      - name: Report Failure
+        if: failure()
+        run: |
+          echo "::error::Linting failed. Please check the logs from the 'Run pre-commit hook' step."
+          exit 1
+
+  test:
+    name: Run tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Install test dependencies
+        run: uv sync --group test || (echo "::error::Failed to install test dependencies using 'uv sync --group test'." && exit 1)
+
+      - name: Run tox tests
+        run: uv run tox -e py312,py312-numba,py312-pytz,docs,integration || (echo "::error::'tox' command failed. Check the test summary above." && exit 1)
