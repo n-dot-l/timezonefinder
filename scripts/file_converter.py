@@ -544,10 +544,23 @@ def compile_h3_map(candidates: Set) -> ShortcutMapping:
         hex_id = candidates.pop()
         cell = get_hex(hex_id)
         polys = list(cell.polys_in_cell)
-        # TODO separate optimisation into separate function
-        polys_optimised = optimise_shortcut_ordering(polys)
-        check_shortcut_sorting(polys_optimised, poly_zone_ids)
-        mapping[hex_id] = polys_optimised
+
+        if not polys:
+            mapping[hex_id] = []
+        else:
+            # get all the zone_ids of the polygons in that cell
+            # cast to set to get unique values
+            zone_ids = {poly_zone_ids[p] for p in polys}
+            if len(zone_ids) == 1:
+                # unique zone found, store as special negative value
+                # cast to int from numpy.uint16
+                unique_zone_id = int(zone_ids.pop())
+                mapping[hex_id] = [-(unique_zone_id + 1)]
+            else:
+                # TODO separate optimisation into separate function
+                polys_optimised = optimise_shortcut_ordering(polys)
+                check_shortcut_sorting(polys_optimised, poly_zone_ids)
+                mapping[hex_id] = polys_optimised
         report_progress()
 
     return mapping
