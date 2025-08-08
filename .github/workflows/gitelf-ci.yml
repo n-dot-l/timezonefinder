@@ -20,11 +20,11 @@ jobs:
 
       - name: Install base tools (uv, tox, pre-commit) and project dependencies
         # Install uv globally, then use uv to install project dependencies
-        # including development and numba specific packages.
+        # including development, numba, and test specific packages.
         # This makes `pre-commit` and `tox` available via `uv run`.
         run: |
           pip install uv
-          uv sync --group dev --group numba
+          uv sync --group dev --group numba --group test
 
       - name: Run pre-commit checks (linting, formatting, static analysis)
         # This step executes pre-commit hooks to ensure code quality and consistency.
