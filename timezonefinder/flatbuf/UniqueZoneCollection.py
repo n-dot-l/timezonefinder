@@ -9,7 +9,7 @@ from timezonefinder.flatbuf.UniqueZoneEntry import UniqueZoneEntry
 np = import_numpy()
 
 
-class UniqueZoneCollection(object):
+class UniqueZoneCollection:
     __slots__ = ["_tab"]
 
     @classmethod
