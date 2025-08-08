@@ -41,7 +41,8 @@ def write_unique_zones_flatbuffers(
         None
     """
     print(
-        f"writing {len(unique_zone_mapping)} unique zone shortcuts to binary file {output_file}"
+        f"writing {len(unique_zone_mapping)} unique zone shortcuts to binary file "
+        f"{output_file}"
     )
     builder = flatbuffers.Builder(0)
     entry_offsets = []
@@ -87,7 +88,7 @@ def read_unique_zones_binary(
     with open(file_path, "rb") as f:
         buf = f.read()
 
-    collection = UniqueZoneCollection.GetRootAsUniqueZoneCollection(buf, 0)
+    collection = UniqueZoneCollection.GetRootAs(buf, 0)
 
     unique_zone_mapping = {}
     for i in range(collection.EntriesLength()):
