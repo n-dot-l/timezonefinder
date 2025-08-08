@@ -13,6 +13,7 @@ from scripts.configs import DATA_REPORT_FILE
 from scripts.utils import percent
 from timezonefinder.flatbuf.polygon_utils import get_coordinate_path
 from timezonefinder.flatbuf.shortcut_utils import get_shortcut_file_path
+from timezonefinder.flatbuf.unique_zone_utils import get_unique_zones_file_path
 from timezonefinder.utils import (
     get_holes_dir,
     get_boundaries_dir,
@@ -120,9 +121,12 @@ def get_file_size_in_mb(file_path: Path) -> float:
     Returns:
         Size of the file in megabytes
     """
-    size_in_bytes = file_path.stat().st_size
-    size_in_mb = size_in_bytes / (1024**2)
-    return size_in_mb
+    try:
+        size_in_bytes = file_path.stat().st_size
+        size_in_mb = size_in_bytes / (1024**2)
+        return size_in_mb
+    except FileNotFoundError:
+        return 0.0
 
 
 @redirect_output_to_file(DATA_REPORT_FILE)
@@ -142,6 +146,61 @@ def print_shortcut_statistics(mapping: Dict[int, List[int]], poly_zone_ids: List
         amount_of_different_zones.append(amount_of_distinct_zones)
 
     print_frequencies(amount_of_different_zones, "timezones/shortcut")
+
+
+@redirect_output_to_file(DATA_REPORT_FILE)
+def print_unique_zone_statistics(
+    shortcuts: Dict[int, List[int]],
+    unique_zone_mapping: Dict[int, int],
+    nr_of_polygons: int,
+    polygon_lengths: List[int],
+):
+    print(rst_title("Unique Zone Statistics", level=1))
+
+    nr_hex_total = len(shortcuts)
+    if nr_hex_total == 0:
+        print("No shortcuts found, cannot generate unique zone statistics.")
+        return
+
+    nr_hex_unique = len(unique_zone_mapping)
+    print(
+        f"Hexagons with unique zone: {nr_hex_unique:,}/{nr_hex_total:,} ({percent(nr_hex_unique, nr_hex_total)}%)"
+    )
+
+    # Now, calculate deletable polygons
+    poly_to_hex: Dict[int, List[int]] = {p: [] for p in range(nr_of_polygons)}
+    for h, polys in shortcuts.items():
+        for p in polys:
+            poly_to_hex[p].append(h)
+
+    deletable_poly_ids = set()
+    for p in range(nr_of_polygons):
+        hex_ids_for_poly = poly_to_hex.get(p)
+        if not hex_ids_for_poly:
+            continue
+
+        is_deletable = True
+        for h in hex_ids_for_poly:
+            if h not in unique_zone_mapping:
+                is_deletable = False
+                break
+
+        if is_deletable:
+            deletable_poly_ids.add(p)
+
+    nr_deletable = len(deletable_poly_ids)
+    if nr_of_polygons > 0:
+        print(
+            f"Deletable polygons: {nr_deletable:,}/{nr_of_polygons:,} ({percent(nr_deletable, nr_of_polygons)}%)"
+        )
+
+    # also report on data size reduction
+    total_coords = sum(polygon_lengths)
+    deletable_coords = sum(polygon_lengths[p] for p in deletable_poly_ids)
+    if total_coords > 0:
+        print(
+            f"Redundant coordinates from deletable polygons: {deletable_coords:,}/{total_coords:,} ({percent(deletable_coords, total_coords)}%)"
+        )
 
 
 def generate_metrics_rows(metric_type: str, metrics_dict: Dict) -> List[List]:
@@ -454,6 +513,7 @@ def report_file_sizes(output_path: Path) -> None:
         "boundary polygon data": boundary_polygon_file,
         "hole polygon data": hole_polygon_file,
         "shortcuts": get_shortcut_file_path(output_path),
+        "unique zones": get_unique_zones_file_path(output_path),
     }
     names_and_sizes = {
         name: get_file_size_in_mb(path) for name, path in names_and_paths.items()
@@ -476,6 +536,7 @@ def report_file_sizes(output_path: Path) -> None:
 
 def write_data_report(
     shortcuts: Dict[int, List[int]],
+    unique_zone_mapping: Dict[int, int],
     output_path: Path,
     nr_of_polygons: int,
     nr_of_zones: int,
@@ -514,4 +575,7 @@ def write_data_report(
         all_tz_names,
     )
     print_shortcut_statistics(shortcuts, poly_zone_ids)
+    print_unique_zone_statistics(
+        shortcuts, unique_zone_mapping, nr_of_polygons, polygon_lengths
+    )
     report_file_sizes(output_path)
