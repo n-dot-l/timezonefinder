@@ -6,7 +6,7 @@ on:
       - 'gitelf-*'
 
 jobs:
-  build-and-test:
+  unit-tests:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -16,14 +16,11 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-          # Removed cache: 'uv' as it's not supported by actions/setup-python
 
-      - name: Install base tools (uv, tox, pre-commit) and project dependencies
-        # Install uv globally, then use uv to install project dependencies
-        # including development, numba, and test specific packages.
-        # This makes `pre-commit` and `tox` available via `uv run`.
+      - name: Install uv and project dependencies for unit tests
         run: |
           pip install uv
+          # Install dev, numba, and test dependencies for Python 3.12 environment
           uv sync --group dev --group numba --group test
 
       - name: Run pre-commit checks (linting, formatting, static analysis)
@@ -41,8 +38,26 @@ jobs:
         run: |
           uv run tox -e py312-numba
 
+  integration-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install uv and project dependencies for integration tests
+        run: |
+          pip install uv
+          # Install dev and test dependencies for Python 3.13 environment
+          uv sync --group dev --group test
+
       - name: Run integration tests via Tox
-        # This step runs the 'integration' tox environment, specifically for integration tests.
-        # Similar to unit tests, failure will result in detailed error messages in the logs.
+        # This step runs the 'integration' tox environment.
+        # If tests fail, tox will exit with a non-zero code and its detailed output
+        # (including pytest failures) will be visible in the build logs.
         run: |
           uv run tox -e integration
