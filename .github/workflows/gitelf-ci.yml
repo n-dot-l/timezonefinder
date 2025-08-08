@@ -1,0 +1,48 @@
+name: GitElf CI
+
+on:
+  push:
+    branches:
+      - 'gitelf-*'
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'uv' # Cache uv dependencies for faster builds
+
+      - name: Install base tools (uv, tox, pre-commit) and project dependencies
+        # Install uv globally, then use uv to install project dependencies
+        # including development and numba specific packages.
+        # This makes `pre-commit` and `tox` available via `uv run`.
+        run: |
+          pip install uv
+          uv sync --group dev --group numba
+
+      - name: Run pre-commit checks (linting, formatting, static analysis)
+        # This step executes pre-commit hooks to ensure code quality and consistency.
+        # It's run via `uv run` to ensure it uses the dependencies installed by uv.
+        # On failure, pre-commit will output detailed error messages directly to the logs.
+        run: |
+          uv run pre-commit run --all-files
+
+      - name: Run unit tests (non-integration) via Tox
+        # This step runs the 'py312-numba' tox environment, which executes unit tests.
+        # Tox manages its own isolated environment and dependencies for this test run.
+        # If tests fail, tox will exit with a non-zero code and its detailed output
+        # (including pytest failures) will be visible in the build logs.
+        run: |
+          uv run tox -e py312-numba
+
+      - name: Run integration tests via Tox
+        # This step runs the 'integration' tox environment, specifically for integration tests.
+        # Similar to unit tests, failure will result in detailed error messages in the logs.
+        run: |
+          uv run tox -e integration
