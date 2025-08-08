@@ -1,0 +1,54 @@
+name: GitElf CI
+
+on:
+  push:
+    branches:
+      - 'gitelf-*'
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Run pre-commit hook
+        id: precommit
+        uses: pre-commit/action@v3.0.1
+        continue-on-error: true
+
+      - name: Check pre-commit result
+        if: steps.precommit.outcome == 'failure'
+        run: |
+          echo "::error::Pre-commit hooks failed. Please run 'pre-commit run --all-files' locally and commit the changes."
+          exit 1
+          
+      - name: Install test dependencies
+        id: install
+        run: uv sync --group test
+        continue-on-error: true
+
+      - name: Check install result
+        if: steps.install.outcome == 'failure'
+        run: |
+          echo "::error::Failed to install test dependencies using uv sync."
+          exit 1
+          
+      - name: Run tests with tox
+        id: test
+        run: uv run tox -e py311,py311-numba,py311-pytz
+        continue-on-error: true
+
+      - name: Check test result
+        if: steps.test.outcome == 'failure'
+        run: |
+          echo "::error::Tox tests failed. Please review the logs."
+          exit 1
