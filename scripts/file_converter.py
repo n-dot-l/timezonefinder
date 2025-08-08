@@ -52,6 +52,11 @@ from typing import Dict, List, NamedTuple, Optional, Set, Tuple, Union
 import h3.api.numpy_int as h3
 import numpy as np
 
+from timezonefinder.flatbuf.unique_zone_shortcut_utils import (
+    get_unique_zone_shortcut_file_path,
+    write_unique_zone_shortcuts_flatbuffers,
+)
+
 from scripts.configs import (
     DEBUG,
     DEBUG_ZONE_CTR_STOP,
@@ -123,6 +128,8 @@ polynrs_of_holes = []
 holes = []
 all_hole_lengths = []
 list_of_pointers = []
+# New global variable for unique zone shortcuts
+unique_zone_mapping: Dict[int, int] = {}
 
 
 def _holes_in_poly(poly_nr):
@@ -543,6 +550,12 @@ def compile_h3_map(candidates: Set) -> ShortcutMapping:
     while candidates:
         hex_id = candidates.pop()
         cell = get_hex(hex_id)
+        # Get unique zones in the cell and populate the global mapping
+        zones_in_cell = cell.zones_in_cell
+        if len(zones_in_cell) == 1:
+            global unique_zone_mapping
+            unique_zone_mapping[hex_id] = list(zones_in_cell)[0]
+
         polys = list(cell.polys_in_cell)
         # TODO separate optimisation into separate function
         polys_optimised = optimise_shortcut_ordering(polys)
@@ -563,10 +576,10 @@ def all_res_candidates(res: int) -> HexIdSet:
 
 
 @time_execution
-def compile_shortcut_mapping() -> ShortcutMapping:
+def compile_shortcut_mapping() -> Tuple[ShortcutMapping, Dict[int, int]]:
     """compiles h3 hexagon shortcut mapping
 
-    returns: mapping from hexagon id to list of polygon ids
+    returns: tuple of (mapping from hexagon id to list of polygon ids, mapping from hexid to unique zone id)
 
     cf. https://eng.uber.com/h3/
     """
@@ -576,9 +589,11 @@ def compile_shortcut_mapping() -> ShortcutMapping:
         f"reached desired resolution {SHORTCUT_H3_RES}.\n"
         "storing mapping to timezone polygons for every hexagon candidate at this resolution (-> 'full coverage')"
     )
+    # compile_h3_map now populates the global unique_zone_mapping
     shortcuts = compile_h3_map(candidates=candidates)
     # Shortcut statistics will be printed in the reporting module
-    return shortcuts
+    global unique_zone_mapping
+    return shortcuts, unique_zone_mapping
 
 
 def create_and_write_hole_registry(polynrs_of_holes, output_path):
@@ -743,9 +758,12 @@ def parse_data(
     parse_polygons_from_json(input_path)
 
     compile_data_files(output_path)
-    shortcuts = compile_shortcut_mapping()
-    output_file = get_shortcut_file_path(output_path)
-    write_shortcuts_flatbuffers(shortcuts, output_file)
+    shortcuts, unique_zone_shortcuts = compile_shortcut_mapping()
+    output_file_shortcuts = get_shortcut_file_path(output_path)
+    write_shortcuts_flatbuffers(shortcuts, output_file_shortcuts)
+
+    output_file_unique_zones = get_unique_zone_shortcut_file_path(output_path)
+    write_unique_zone_shortcuts_flatbuffers(unique_zone_shortcuts, output_file_unique_zones)
 
     print(f"\n\nfinished parsing timezonefinder data to {output_path}")
 
