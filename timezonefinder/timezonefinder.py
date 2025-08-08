@@ -23,6 +23,10 @@ from timezonefinder.flatbuf.shortcut_utils import (
     get_shortcut_file_path,
     read_shortcuts_binary,
 )
+from timezonefinder.flatbuf.unique_zone_utils import (
+    get_unique_zones_file_path,
+    read_unique_zones_binary,
+)
 from timezonefinder.zone_names import read_zone_names
 
 
@@ -35,6 +39,7 @@ class AbstractTimezoneFinder(ABC):
     __slots__ = [
         "data_location",
         "shortcut_mapping",
+        "unique_zone_mapping",
         "in_memory",
         "_fromfile",
         "timezone_names",
@@ -68,6 +73,12 @@ class AbstractTimezoneFinder(ABC):
 
         path2shortcut_bin = get_shortcut_file_path(self.data_location)
         self.shortcut_mapping = read_shortcuts_binary(path2shortcut_bin)
+
+        path2unique_zones_bin = get_unique_zones_file_path(self.data_location)
+        try:
+            self.unique_zone_mapping = read_unique_zones_binary(path2unique_zones_bin)
+        except FileNotFoundError:
+            self.unique_zone_mapping = {}
 
         zone_ids_path = get_zone_ids_path(self.data_location)
         self.zone_ids = read_per_polygon_vector(zone_ids_path)
@@ -468,6 +479,16 @@ class TimezoneFinder(AbstractTimezoneFinder):
         :return: the timezone name of the matched polygon, or None if no match is found.
         """
         lng, lat = utils.validate_coordinates(lng, lat)
+
+        # NEW: check for a unique zone match first
+        hex_id = h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)
+        try:
+            zone_id = self.unique_zone_mapping[hex_id]
+            return self.zone_name_from_id(zone_id)
+        except KeyError:
+            # no unique zone for this hex id, continue with normal lookup
+            pass
+
         possible_boundaries = self.get_boundaries_in_shortcut(lng=lng, lat=lat)
         nr_possible_polygons = len(possible_boundaries)
         if nr_possible_polygons == 0:

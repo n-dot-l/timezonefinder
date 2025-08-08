@@ -84,6 +84,10 @@ from timezonefinder.flatbuf.shortcut_utils import (
     get_shortcut_file_path,
     write_shortcuts_flatbuffers,
 )
+from timezonefinder.flatbuf.unique_zone_utils import (
+    get_unique_zones_file_path,
+    write_unique_zones_flatbuffers,
+)
 from timezonefinder.configs import DEFAULT_DATA_DIR, SHORTCUT_H3_RES
 from timezonefinder.np_binary_helpers import (
     get_xmax_path,
@@ -747,10 +751,31 @@ def parse_data(
     output_file = get_shortcut_file_path(output_path)
     write_shortcuts_flatbuffers(shortcuts, output_file)
 
+    print("\ncomputing unique zone mapping...")
+    unique_zone_mapping = {}
+    for hex_id, poly_ids in shortcuts.items():
+        if not poly_ids:
+            continue
+
+        # all poly_ids in this shortcut must point to the same zone_id
+        first_zone_id = poly_zone_ids[poly_ids[0]]
+        is_unique = True
+        for poly_id in poly_ids[1:]:
+            if poly_zone_ids[poly_id] != first_zone_id:
+                is_unique = False
+                break
+
+        if is_unique:
+            unique_zone_mapping[hex_id] = first_zone_id
+
+    unique_zones_output_file = get_unique_zones_file_path(output_path)
+    write_unique_zones_flatbuffers(unique_zone_mapping, unique_zones_output_file)
+
     print(f"\n\nfinished parsing timezonefinder data to {output_path}")
 
     write_data_report(
         shortcuts,
+        unique_zone_mapping,
         output_path,
         nr_of_polygons,
         nr_of_zones,
