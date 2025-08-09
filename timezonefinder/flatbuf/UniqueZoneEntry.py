@@ -11,8 +11,8 @@ from flatbuffers.compat import import_numpy
 np = import_numpy()
 
 
-class UniqueZoneEntry(object):
-    __slots__ = ['_tab']
+class UniqueZoneEntry:
+    __slots__ = ["_tab"]
 
     @classmethod
     def GetRootAsUniqueZoneEntry(cls, buf, offset):
@@ -24,7 +24,9 @@ class UniqueZoneEntry(object):
     @classmethod
     def UniqueZoneEntryBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
         # Using a custom identifier for UniqueZoneEntry (e.g., UZEN)
-        return flatbuffers.util.BufferHasIdentifier(buf, offset, b'\x55\x5A\x45\x4E', size_prefixed=size_prefixed)
+        return flatbuffers.util.BufferHasIdentifier(
+            buf, offset, b"\x55\x5a\x45\x4e", size_prefixed=size_prefixed
+        )
 
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
@@ -32,13 +34,17 @@ class UniqueZoneEntry(object):
     def HexId(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         if o != 0:
-            return self._tab.Get(flatbuffers.number_types.Uint64Flags, o + self._tab.Pos)
+            return self._tab.Get(
+                flatbuffers.number_types.Uint64Flags, o + self._tab.Pos
+            )
         return 0
 
     def ZoneId(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(6))
         if o != 0:
-            return self._tab.Get(flatbuffers.number_types.Uint16Flags, o + self._tab.Pos)
+            return self._tab.Get(
+                flatbuffers.number_types.Uint16Flags, o + self._tab.Pos
+            )
         return 0
 
     @classmethod

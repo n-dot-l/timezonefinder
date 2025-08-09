@@ -3,9 +3,8 @@ Utility functions for working with unique zone shortcut data in FlatBuffers.
 """
 
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict
 import flatbuffers
-import numpy as np
 from timezonefinder.configs import DEFAULT_DATA_DIR
 from timezonefinder.flatbuf.UniqueZoneEntry import (
     UniqueZoneEntryStart,
@@ -41,7 +40,9 @@ def write_unique_zone_flatbuffers(
     Returns:
         None
     """
-    print(f"writing {len(unique_zone_mapping)} unique zone shortcuts to binary file {output_file}")
+    print(
+        f"writing {len(unique_zone_mapping)} unique zone shortcuts to binary file {output_file}"
+    )
     builder = flatbuffers.Builder(0)
     entry_offsets = []
 
