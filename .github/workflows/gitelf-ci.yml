@@ -34,5 +34,5 @@ jobs:
       - name: Install test dependencies
         run: uv sync --group test
 
-      - name: Run tox tests for py312 (numba, pytz, integration)
-        run: uv run tox -e py312-numba,py312-pytz,integration
+      - name: Run tox tests for py312
+        run: uv run tox -e py312,py312-numba,py312-pytz
