@@ -23,6 +23,10 @@ from timezonefinder.flatbuf.shortcut_utils import (
     get_shortcut_file_path,
     read_shortcuts_binary,
 )
+from timezonefinder.flatbuf.unique_zone_shortcut_utils import (
+    get_unique_zone_shortcut_file_path,
+    read_unique_zone_shortcuts_binary,
+)
 from timezonefinder.zone_names import read_zone_names
 
 
@@ -35,6 +39,7 @@ class AbstractTimezoneFinder(ABC):
     __slots__ = [
         "data_location",
         "shortcut_mapping",
+        "unique_zone_shortcut_mapping", # NEW slot
         "in_memory",
         "_fromfile",
         "timezone_names",
@@ -68,6 +73,10 @@ class AbstractTimezoneFinder(ABC):
 
         path2shortcut_bin = get_shortcut_file_path(self.data_location)
         self.shortcut_mapping = read_shortcuts_binary(path2shortcut_bin)
+
+        # NEW: Load unique zone shortcuts
+        path2unique_shortcut_bin = get_unique_zone_shortcut_file_path(self.data_location)
+        self.unique_zone_shortcut_mapping = read_unique_zone_shortcuts_binary(path2unique_shortcut_bin)
 
         zone_ids_path = get_zone_ids_path(self.data_location)
         self.zone_ids = read_per_polygon_vector(zone_ids_path)
@@ -179,8 +188,15 @@ class AbstractTimezoneFinder(ABC):
         :param lat: The latitude of the point in degrees (90.0 to -90.0).
         :return: The unique zone ID or None if no polygons exist in the shortcut.
         """
-        polys = self.get_boundaries_in_shortcut(lng=lng, lat=lat)
-        if len(polys) == 0:
+        hex_id = h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)
+        # First, try to use the unique zone shortcut (fast path)
+        unique_id = self.unique_zone_shortcut_mapping.get(hex_id)
+        if unique_id is not None:
+            return unique_id
+
+        # Fallback to general shortcut lookup if no unique shortcut is found
+        polys = self.shortcut_mapping.get(hex_id)
+        if polys is None or len(polys) == 0:
             return None
         if len(polys) == 1:
             return self.zone_id_of(polys[0])

@@ -6,6 +6,7 @@ import numpy as np
 # SHORTCUT SETTINGS
 # h3 library
 SHORTCUT_H3_RES: int = 3
+UNIQUE_ZONE_SHORTCUTS_FNAME = "unique_zone_shortcuts.fbs"
 
 OCEAN_TIMEZONE_PREFIX = r"Etc/GMT"
 
