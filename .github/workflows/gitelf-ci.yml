@@ -1,0 +1,39 @@
+name: GitElf CI
+
+on:
+  push:
+    branches:
+      - 'gitelf-*'
+
+jobs:
+  build_and_test:
+    name: Build and Test Suite
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12" # Using a recent, stable Python version for the baseline CI
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Run pre-commit hooks (linter & format checks)
+        # This action installs and runs pre-commit checks, ensuring code quality standards.
+        uses: pre-commit/action@v3.0.1
+        env:
+          # Propagate TOX_SKIP_MISSING_INTERPRETERS if it's needed for pre-commit,
+          # though usually not. Keeping it consistent with build.yml.
+          TOX_SKIP_MISSING_INTERPRETERS: False
+
+      - name: Install test dependencies
+        # Installs all dependencies required for running tests as defined in pyproject.toml's [project.optional-dependencies.test]
+        run: uv sync --group test || { echo "Error: Failed to install test dependencies. Check uv sync output for details."; exit 1; }
+
+      - name: Run project test suite with Tox
+        # Executes all default test environments defined in tox.ini (e.g., various Python versions, numba, pytz, docs, integration)
+        # This provides a comprehensive test coverage for establishing a baseline.
+        run: uv run tox || { echo "Error: Test suite failed. Review the logs above for detailed test failures and summaries."; exit 1; }
