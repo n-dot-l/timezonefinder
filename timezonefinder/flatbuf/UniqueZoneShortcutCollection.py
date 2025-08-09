@@ -1,11 +1,11 @@
 # UniqueZoneShortcutCollection
 import flatbuffers
-from flatbuffers.compat import import_numpy
 
 from timezonefinder.flatbuf.UniqueZoneShortcutEntry import UniqueZoneShortcutEntry
 
-class UniqueZoneShortcutCollection(object):
-    __slots__ = ['_tab']
+
+class UniqueZoneShortcutCollection:
+    __slots__ = ["_tab"]
 
     @classmethod
     def GetRootAs(cls, buf, offset=0):
@@ -46,14 +46,20 @@ class UniqueZoneShortcutCollection(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         return o == 0
 
+
 def UniqueZoneShortcutCollectionStart(builder):
     builder.StartObject(1)
 
+
 def UniqueZoneShortcutCollectionAddEntries(builder, entries):
-    builder.PrependUOffsetTRelativeSlot(0, flatbuffers.number_types.UOffsetTFlags.py_type(entries), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        0, flatbuffers.number_types.UOffsetTFlags.py_type(entries), 0
+    )
+
 
 def UniqueZoneShortcutCollectionStartEntriesVector(builder, numElems):
     return builder.StartVector(4, numElems, 4)
+
 
 def UniqueZoneShortcutCollectionEnd(builder):
     return builder.EndObject()
