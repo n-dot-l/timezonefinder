@@ -37,6 +37,10 @@ jobs:
           uv sync --group test
           echo "Test dependencies installed."
 
+      - name: Generate timezone data files
+        run: |
+          bash parse_data.sh
+
       - name: Run tox environments (py312, numba, pytz, docs, integration)
         run: |
           echo "Starting test suite execution via tox..."

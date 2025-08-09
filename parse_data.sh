@@ -19,8 +19,7 @@ parent_path=$(
 cd "$parent_path" || exit 1
 mkdir -p "$WORKING_FOLDER_NAME" # if does not exist
 
-echo "use timezone data with oceans (0: No, 1: Yes)? "
-read -r WITH_OCEANS
+WITH_OCEANS=1 # Always use data with oceans for CI and automated builds
 if [ "$WITH_OCEANS" -eq 1 ]; then
     INTERFIX=-with-oceans
 else
@@ -51,12 +50,7 @@ SCRIPT_PATH=./scripts/file_converter.py
 echo "calling $SCRIPT_PATH:"
 python "$SCRIPT_PATH" -inp "$JSON_PATH" -out "$DESTINATION_PATH"
 
-echo "runnings tests..."
-if ! tox; then
-    # assert that all tests are passing
-    echo "tests failed!"
-    exit 1
-fi
+
 
 # minor version bump
 uv run --bump minor
