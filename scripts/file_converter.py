@@ -567,9 +567,7 @@ def compile_unique_zone_mapping() -> Dict[int, int]:
     """
     print("\n\ncomputing unique zone shortcut mapping...")
     candidates = all_res_candidates(SHORTCUT_H3_RES)
-    print(
-        f"checking for unique zones at resolution {SHORTCUT_H3_RES}.\n"
-    )
+    print(f"checking for unique zones at resolution {SHORTCUT_H3_RES}.\n")
     unique_zones: Dict[int, int] = {}
     total_candidates = len(candidates)
 

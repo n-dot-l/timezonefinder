@@ -11,8 +11,8 @@ from flatbuffers.compat import import_numpy
 np = import_numpy()
 
 
-class UniqueZoneCollection(object):
-    __slots__ = ['_tab']
+class UniqueZoneCollection:
+    __slots__ = ["_tab"]
 
     @classmethod
     def GetRootAsUniqueZoneCollection(cls, buf, offset):
@@ -24,7 +24,9 @@ class UniqueZoneCollection(object):
     @classmethod
     def UniqueZoneCollectionBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
         # Using a custom identifier for UniqueZoneCollection (e.g., UZCO)
-        return flatbuffers.util.BufferHasIdentifier(buf, offset, b'\x55\x5A\x43\x4F', size_prefixed=size_prefixed)
+        return flatbuffers.util.BufferHasIdentifier(
+            buf, offset, b"\x55\x5a\x43\x4f", size_prefixed=size_prefixed
+        )
 
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
@@ -36,6 +38,7 @@ class UniqueZoneCollection(object):
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
             x = self._tab.Indirect(x)
             from timezonefinder.flatbuf.UniqueZoneEntry import UniqueZoneEntry
+
             obj = UniqueZoneEntry()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -57,7 +60,9 @@ class UniqueZoneCollection(object):
 
     @classmethod
     def AddEntries(cls, builder, entries):
-        builder.PrependUOffsetTRelativeSlot(0, flatbuffers.number_types.UOffsetTFlags.py_type(entries), 0)
+        builder.PrependUOffsetTRelativeSlot(
+            0, flatbuffers.number_types.UOffsetTFlags.py_type(entries), 0
+        )
 
     @classmethod
     def StartEntriesVector(cls, builder, numElems):
