@@ -6,19 +6,8 @@ from pathlib import Path
 from typing import Dict
 import flatbuffers
 from timezonefinder.configs import DEFAULT_DATA_DIR
-from timezonefinder.flatbuf.UniqueZoneEntry import (
-    UniqueZoneEntryStart,
-    UniqueZoneEntryEnd,
-    UniqueZoneEntryAddHexId,
-    UniqueZoneEntryAddZoneId,
-)
-from timezonefinder.flatbuf.UniqueZoneCollection import (
-    UniqueZoneCollection,
-    UniqueZoneCollectionStart,
-    UniqueZoneCollectionEnd,
-    UniqueZoneCollectionAddEntries,
-    UniqueZoneCollectionStartEntriesVector,
-)
+from timezonefinder.flatbuf.UniqueZoneEntry import UniqueZoneEntry
+from timezonefinder.flatbuf.UniqueZoneCollection import UniqueZoneCollection
 
 
 def get_unique_zone_file_path(output_path: Path = DEFAULT_DATA_DIR) -> Path:
@@ -48,21 +37,21 @@ def write_unique_zone_flatbuffers(
 
     for hex_id, zone_id in unique_zone_mapping.items():
         # Start building unique zone entry
-        UniqueZoneEntryStart(builder)
-        UniqueZoneEntryAddHexId(builder, hex_id)
-        UniqueZoneEntryAddZoneId(builder, zone_id)
-        entry_offsets.append(UniqueZoneEntryEnd(builder))
+        UniqueZoneEntry.Start(builder)
+        UniqueZoneEntry.AddHexId(builder, hex_id)
+        UniqueZoneEntry.AddZoneId(builder, zone_id)
+        entry_offsets.append(UniqueZoneEntry.End(builder))
 
     # Create vector of unique zone entries
-    UniqueZoneCollectionStartEntriesVector(builder, len(entry_offsets))
+    UniqueZoneCollection.StartEntriesVector(builder, len(entry_offsets))
     for offset in reversed(entry_offsets):
         builder.PrependUOffsetTRelative(offset)
     entries_vector = builder.EndVector()
 
     # Create UniqueZoneCollection
-    UniqueZoneCollectionStart(builder)
-    UniqueZoneCollectionAddEntries(builder, entries_vector)
-    collection = UniqueZoneCollectionEnd(builder)
+    UniqueZoneCollection.Start(builder)
+    UniqueZoneCollection.AddEntries(builder, entries_vector)
+    collection = UniqueZoneCollection.End(builder)
 
     builder.Finish(collection)
     buf = builder.Output()
