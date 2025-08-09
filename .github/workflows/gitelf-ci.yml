@@ -1,0 +1,47 @@
+name: GitElf CI
+
+on:
+  push:
+    branches:
+      - 'gitelf-*'
+
+jobs:
+  pre-commit-hooks:
+    name: Run pre-commit hooks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run pre-commit hook
+        uses: pre-commit/action@v3.0.1
+
+  test:
+    name: Run Test Suite
+    runs-on: ubuntu-latest
+    needs: pre-commit-hooks # Ensure pre-commit checks pass before running tests
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Install test dependencies
+        run: |
+          echo "Installing test dependencies..."
+          uv sync --group test
+          echo "Test dependencies installed."
+
+      - name: Run tox environments (py312, numba, pytz, docs, integration)
+        run: |
+          echo "Starting test suite execution via tox..."
+          uv run tox -e py312,py312-numba,py312-pytz,docs,integration
+          echo "Test suite execution completed. Please check the logs above for a detailed test summary and any failures."
+        # GitHub Actions will automatically capture stdout/stderr from this command.
+        # If 'uv run tox' exits with a non-zero status, the step will be marked as failed,
+        # and the logs will contain the test runner's output, including any error messages and summaries.
