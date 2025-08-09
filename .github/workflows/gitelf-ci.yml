@@ -44,11 +44,8 @@ jobs:
       - name: Run tox environments (py312, numba, pytz, docs, integration)
         run: |
           echo "Starting test suite execution via tox..."
-          # Redirect tox output to a file and print to stdout for full log visibility
-          uv run tox -vv -e py312,py312-numba,py312-pytz,docs,integration 2>&1 | tee tox_output.log
-          if [ $? -ne 0 ]; then
-            echo "Tox tests failed. Full log:"
-            cat tox_output.log
-            exit 1
-          fi
-          echo "Test suite execution completed."
+          uv run tox -e py312,py312-numba,py312-pytz,docs,integration
+          echo "Test suite execution completed. Please check the logs above for a detailed test summary and any failures."
+        # GitHub Actions will automatically capture stdout/stderr from this command.
+        # If 'uv run tox' exits with a non-zero status, the step will be marked as failed,
+        # and the logs will contain the test runner's output, including any error messages and summaries.
