@@ -44,7 +44,7 @@ jobs:
       - name: Run tox environments (py312, numba, pytz, docs, integration)
         run: |
           echo "Starting test suite execution via tox..."
-          uv run tox -e py312,py312-numba,py312-pytz,docs,integration
+          uv run tox -vv -e py312,py312-numba,py312-pytz,docs,integration
           echo "Test suite execution completed. Please check the logs above for a detailed test summary and any failures."
         # GitHub Actions will automatically capture stdout/stderr from this command.
         # If 'uv run tox' exits with a non-zero status, the step will be marked as failed,
