@@ -84,6 +84,10 @@ from timezonefinder.flatbuf.shortcut_utils import (
     get_shortcut_file_path,
     write_shortcuts_flatbuffers,
 )
+from timezonefinder.flatbuf.unique_zone_shortcut_utils import (
+    get_unique_zone_shortcut_file_path,
+    write_unique_zone_shortcuts_flatbuffers,
+)
 from timezonefinder.configs import DEFAULT_DATA_DIR, SHORTCUT_H3_RES
 from timezonefinder.np_binary_helpers import (
     get_xmax_path,
@@ -123,6 +127,9 @@ polynrs_of_holes = []
 holes = []
 all_hole_lengths = []
 list_of_pointers = []
+
+# New global variable for unique zone shortcuts
+unique_zone_shortcuts: Dict[int, int] = {}
 
 
 def _holes_in_poly(poly_nr):
@@ -523,7 +530,7 @@ def compile_h3_map(candidates: Set) -> ShortcutMapping:
     operate on one hex resolution
     also store results separately to divide the output data files
     """
-    global poly_zone_ids
+    global poly_zone_ids, unique_zone_shortcuts
 
     # convert to numpy array for advanced indexing
     poly_zone_ids = np.array(poly_zone_ids, dtype=DTYPE_FORMAT_H_NUMPY)
@@ -543,8 +550,13 @@ def compile_h3_map(candidates: Set) -> ShortcutMapping:
     while candidates:
         hex_id = candidates.pop()
         cell = get_hex(hex_id)
+
+        # Check for unique zone shortcut
+        zones = list(cell.zones_in_cell)
+        if len(zones) == 1:
+            unique_zone_shortcuts[hex_id] = zones[0]
+
         polys = list(cell.polys_in_cell)
-        # TODO separate optimisation into separate function
         polys_optimised = optimise_shortcut_ordering(polys)
         check_shortcut_sorting(polys_optimised, poly_zone_ids)
         mapping[hex_id] = polys_optimised
@@ -736,6 +748,8 @@ def parse_data(
     input_path: Union[Path, str] = DEFAULT_INPUT_PATH,
     output_path: Union[Path, str] = DEFAULT_DATA_DIR,
 ):
+    global unique_zone_shortcuts # Access the global variable
+
     input_path = Path(input_path)
     output_path = Path(output_path)
     output_path.mkdir(parents=True, exist_ok=True)
@@ -744,8 +758,14 @@ def parse_data(
 
     compile_data_files(output_path)
     shortcuts = compile_shortcut_mapping()
-    output_file = get_shortcut_file_path(output_path)
-    write_shortcuts_flatbuffers(shortcuts, output_file)
+
+    # Write the regular shortcuts
+    output_file_shortcuts = get_shortcut_file_path(output_path)
+    write_shortcuts_flatbuffers(shortcuts, output_file_shortcuts)
+
+    # NEW: Write the unique zone shortcuts
+    unique_shortcuts_output_file = get_unique_zone_shortcut_file_path(output_path)
+    write_unique_zone_shortcuts_flatbuffers(unique_zone_shortcuts, unique_shortcuts_output_file)
 
     print(f"\n\nfinished parsing timezonefinder data to {output_path}")
 
@@ -759,6 +779,7 @@ def parse_data(
         polynrs_of_holes,
         poly_zone_ids,
         all_tz_names,
+        unique_zone_shortcuts # Pass the new data to the report
     )
 
 
