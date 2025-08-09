@@ -32,6 +32,14 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v6
 
+      - name: Install FlatBuffers compiler
+        run: |
+          sudo apt-get update && sudo apt-get install -y flatbuffers-compiler
+
+      - name: Compile FlatBuffers schemas
+        run: |
+          make flatbuf || { echo "ERROR: Failed to compile FlatBuffers schemas."; exit 1; }
+
       - name: Install test dependencies
         run: |
           uv sync --group test || { echo "ERROR: Failed to install test dependencies for Python 3.12."; exit 1; }
@@ -56,6 +64,14 @@ jobs:
 
       - name: Install uv
         uses: astral-sh/setup-uv@v6
+
+      - name: Install FlatBuffers compiler
+        run: |
+          sudo apt-get update && sudo apt-get install -y flatbuffers-compiler
+
+      - name: Compile FlatBuffers schemas
+        run: |
+          make flatbuf || { echo "ERROR: Failed to compile FlatBuffers schemas."; exit 1; }
 
       - name: Install test dependencies
         run: |
