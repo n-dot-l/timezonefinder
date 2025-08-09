@@ -1,0 +1,84 @@
+name: GitElf CI
+
+on:
+  push:
+    branches:
+      - 'gitelf-*'
+
+jobs:
+  pre-commit-hooks:
+    name: Run pre-commit hooks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run pre-commit hook
+        uses: pre-commit/action@v3.0.1
+        # This action will fail the job if pre-commit finds issues,
+        # with details in the step logs.
+
+  test-regular:
+    name: Run regular tests (Python 3.12)
+    runs-on: ubuntu-latest
+    needs: pre-commit-hooks # Ensure pre-commit passes first
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Install FlatBuffers compiler
+        run: |
+          sudo apt-get update && sudo apt-get install -y flatbuffers-compiler
+
+      - name: Compile FlatBuffers schemas
+        run: |
+          make flatbuf || { echo "ERROR: Failed to compile FlatBuffers schemas."; exit 1; }
+
+      - name: Install test dependencies
+        run: |
+          uv sync --group test || { echo "ERROR: Failed to install test dependencies for Python 3.12."; exit 1; }
+
+      - name: Run tox for Python 3.12 environments
+        # Runs standard tests, numba-specific, pytz-specific, and docs build
+        run: |
+          echo "Running tox environments: py312, py312-numba, py312-pytz, docs"
+          uv run tox -e py312,py312-numba,py312-pytz,docs || { echo "ERROR: Regular tests failed for Python 3.12. Check logs for details."; exit 1; }
+
+  test-integration:
+    name: Run integration tests (Python 3.13)
+    runs-on: ubuntu-latest
+    needs: pre-commit-hooks # Ensure pre-commit passes first
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Install FlatBuffers compiler
+        run: |
+          sudo apt-get update && sudo apt-get install -y flatbuffers-compiler
+
+      - name: Compile FlatBuffers schemas
+        run: |
+          make flatbuf || { echo "ERROR: Failed to compile FlatBuffers schemas."; exit 1; }
+
+      - name: Install test dependencies
+        run: |
+          uv sync --group test || { echo "ERROR: Failed to install test dependencies for Python 3.13."; exit 1; }
+
+      - name: Run tox for integration environment
+        # The integration environment in tox.ini explicitly uses python3.13
+        run: |
+          echo "Running tox environment: integration"
+          uv run tox -e integration || { echo "ERROR: Integration tests failed for Python 3.13. Check logs for details."; exit 1; }
