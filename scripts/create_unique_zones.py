@@ -48,8 +48,10 @@ write_unique_zones_flatbuffers(unique_zone_mapping, output_path)
 print(f"unique zone mapping with {len(unique_zone_mapping)} entries has been created.")
 
 # The shortcut mapping is NOT pruned, because this would break the functionality of
-# TimezoneFinder.certain_timezone_at() and TimezoneFinder.get_geometry().
-# The `shortcuts_unique.fbs` file is just an add-on for speeding up queries.
+# TimezoneFinder.certain_timezone_at(). That function needs to do a point in polygon test
+# for all candidate polygons in a shortcut, even if there is only one candidate zone.
+# Pruning the shortcuts for unique zones would remove the polygon ID information needed for this.
+# The `shortcuts_unique.fbs` file is just an add-on for speeding up queries in the other functions.
 print(
     "The shortcut mapping has NOT been pruned. The created unique zone mapping is just an add-on."
 )
