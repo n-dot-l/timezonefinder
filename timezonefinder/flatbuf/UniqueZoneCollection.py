@@ -3,9 +3,9 @@
 import flatbuffers
 from flatbuffers.compat import import_numpy
 
-np = import_numpy()
-
 from timezonefinder.flatbuf.UniqueZoneEntry import UniqueZoneEntry
+
+np = import_numpy()
 
 
 class UniqueZoneCollection:

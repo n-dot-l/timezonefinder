@@ -28,7 +28,6 @@ unique_zone_mapping = {}
 for hex_id, poly_ids in shortcut_mapping.items():
     if len(poly_ids) == 0:
         continue
-    
     p_zone_ids = zone_ids[poly_ids]
     unique_ids = np.unique(p_zone_ids)
 
