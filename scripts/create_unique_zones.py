@@ -5,6 +5,7 @@ and prunes the original shortcut mapping.
 without any further lookup.
 This allows for a massive speedup.
 """
+
 import numpy as np
 from timezonefinder.flatbuf.shortcut_utils import (
     get_shortcut_file_path,
