@@ -52,8 +52,8 @@ print(f"unique zone mapping with {len(unique_zone_mapping)} entries has been cre
 print("pruning shortcut mapping...")
 for hex_id in unique_zone_mapping:
     if hex_id in shortcut_mapping:
-        # setting the list of polygon IDs to empty, effectively removing them
-        shortcut_mapping[hex_id] = []
+        # remove the entry, as it is now in the unique zone mapping
+        del shortcut_mapping[hex_id]
 
 write_shortcuts_flatbuffers(shortcut_mapping, shortcut_path)
 print("shortcut mapping has been pruned.")

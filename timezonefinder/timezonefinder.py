@@ -163,7 +163,9 @@ class AbstractTimezoneFinder(ABC):
         :return: An array of boundary polygon IDs.
         """
         hex_id = h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)
-        shortcut_boundary_ids = self.shortcut_mapping[hex_id]
+        shortcut_boundary_ids = self.shortcut_mapping.get(hex_id)
+        if shortcut_boundary_ids is None:
+            return np.array([], dtype=np.uint16)
         return shortcut_boundary_ids
 
     def most_common_zone_id(self, *, lng: float, lat: float) -> Optional[int]:
