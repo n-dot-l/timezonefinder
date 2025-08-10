@@ -31,7 +31,9 @@ def write_unique_zones_flatbuffers(
     Returns:
         None
     """
-    print(f"writing {len(unique_zone_mapping)} unique zone shortcuts to binary file {output_file}")
+    print(
+        f"writing {len(unique_zone_mapping)} unique zone shortcuts to binary file {output_file}"
+    )
     builder = flatbuffers.Builder(0)
     entry_offsets = []
 

@@ -2,11 +2,14 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
 np = import_numpy()
 
 from timezonefinder.flatbuf.UniqueZoneEntry import UniqueZoneEntry
-class UniqueZoneCollection(object):
-    __slots__ = ['_tab']
+
+
+class UniqueZoneCollection:
+    __slots__ = ["_tab"]
 
     @classmethod
     def GetRootAs(cls, buf, offset=0):
@@ -19,6 +22,7 @@ class UniqueZoneCollection(object):
     def GetRootAsUniqueZoneCollection(cls, buf, offset=0):
         """This method is deprecated. Please switch to GetRootAs."""
         return cls.GetRootAs(buf, offset)
+
     # UniqueZoneCollection
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
@@ -47,15 +51,36 @@ class UniqueZoneCollection(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         return o == 0
 
-def UniqueZoneCollectionStart(builder): builder.StartObject(1)
+
+def UniqueZoneCollectionStart(builder):
+    builder.StartObject(1)
+
+
 def Start(builder):
     return UniqueZoneCollectionStart(builder)
-def UniqueZoneCollectionAddEntries(builder, entries): builder.PrependUOffsetTRelativeSlot(0, flatbuffers.number_types.UOffsetTFlags.py_type(entries), 0)
+
+
+def UniqueZoneCollectionAddEntries(builder, entries):
+    builder.PrependUOffsetTRelativeSlot(
+        0, flatbuffers.number_types.UOffsetTFlags.py_type(entries), 0
+    )
+
+
 def AddEntries(builder, entries):
     return UniqueZoneCollectionAddEntries(builder, entries)
-def UniqueZoneCollectionStartEntriesVector(builder, numElems): return builder.StartVector(4, numElems, 4)
+
+
+def UniqueZoneCollectionStartEntriesVector(builder, numElems):
+    return builder.StartVector(4, numElems, 4)
+
+
 def StartEntriesVector(builder, numElems):
     return UniqueZoneCollectionStartEntriesVector(builder, numElems)
-def UniqueZoneCollectionEnd(builder): return builder.EndObject()
+
+
+def UniqueZoneCollectionEnd(builder):
+    return builder.EndObject()
+
+
 def End(builder):
     return UniqueZoneCollectionEnd(builder)
