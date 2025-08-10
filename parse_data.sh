@@ -51,7 +51,7 @@ SCRIPT_PATH=./scripts/file_converter.py
 echo "calling $SCRIPT_PATH:"
 python "$SCRIPT_PATH" -inp "$JSON_PATH" -out "$DESTINATION_PATH"
 
-echo "creating unique zone shortcuts and pruning shortcut file..."
+echo "creating unique zone shortcuts..."
 python scripts/create_unique_zones.py
 
 echo "runnings tests..."

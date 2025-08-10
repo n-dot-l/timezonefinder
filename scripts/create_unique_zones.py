@@ -48,12 +48,9 @@ write_unique_zones_flatbuffers(unique_zone_mapping, output_path)
 
 print(f"unique zone mapping with {len(unique_zone_mapping)} entries has been created.")
 
-# prune shortcut mapping
-print("pruning shortcut mapping...")
-for hex_id in unique_zone_mapping:
-    if hex_id in shortcut_mapping:
-        # remove the entry, as it is now in the unique zone mapping
-        del shortcut_mapping[hex_id]
-
-write_shortcuts_flatbuffers(shortcut_mapping, shortcut_path)
-print("shortcut mapping has been pruned.")
+# The shortcut mapping is NOT pruned, because this would break the functionality of
+# TimezoneFinder.certain_timezone_at() and TimezoneFinder.get_geometry().
+# The `shortcuts_unique.fbs` file is just an add-on for speeding up queries.
+print(
+    "The shortcut mapping has NOT been pruned. The created unique zone mapping is just an add-on."
+)
