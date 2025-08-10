@@ -10,7 +10,6 @@ import numpy as np
 from timezonefinder.flatbuf.shortcut_utils import (
     get_shortcut_file_path,
     read_shortcuts_binary,
-    write_shortcuts_flatbuffers,
 )
 from timezonefinder.flatbuf.unique_zone_utils import (
     get_unique_zone_file_path,
