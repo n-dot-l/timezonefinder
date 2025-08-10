@@ -51,6 +51,9 @@ SCRIPT_PATH=./scripts/file_converter.py
 echo "calling $SCRIPT_PATH:"
 python "$SCRIPT_PATH" -inp "$JSON_PATH" -out "$DESTINATION_PATH"
 
+echo "creating unique zone shortcuts..."
+python scripts/create_unique_zones.py
+
 echo "runnings tests..."
 if ! tox; then
     # assert that all tests are passing
